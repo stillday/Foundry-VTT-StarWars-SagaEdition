@@ -131,6 +131,11 @@ export class Attack {
     };
 
     #mapToStandardRanges(range) {
+        // an item without a subtype has no resolvable range category
+        if (typeof range !== "string" || range === "") {
+            return "";
+        }
+
         if (range === "Grenades") {
             return "Thrown Weapons"
         }
@@ -459,7 +464,9 @@ export class Attack {
 
         for (const modifier of value.modifiers) {
             if(modifier.type === "RANGE"){
-                const rangeBlock = SWSE.Combat.range[this.range]
+                // Same fallback as getRangeModifierBlock(): a subtype that is not a range-grid key
+                // (Exotic Ranged Weapons, Mines, homebrew, blank) has no range bands at all.
+                const rangeBlock = SWSE.Combat.range[this.range] || {}
                 const possibleRanges = Object.keys(rangeBlock)
                 if(!possibleRanges.includes(modifier.requirement.toLowerCase())) return false;
             }
@@ -866,6 +873,13 @@ export class Attack {
     rangePenalty(distance) {
         let rangeGrid = CONFIG.SWSE.Combat.range[this.range];
 
+        // Homebrew items and imports can carry a subtype that is not a range-grid key (or none at
+        // all).  Without a grid there is no defined range band, so the attack resolves without a
+        // range penalty instead of throwing out of the whole attack workflow.
+        if (!rangeGrid) {
+            return {penalty: 0, range: ""};
+        }
+
         let rangeDescription = outOfRange;
         for (const [range, details] of Object.entries(rangeGrid)) {
             if (distance >= details.low && distance <= details.high) {
@@ -1190,7 +1204,8 @@ export class Attack {
     async placeTemplate() {
         const templates = [];
         for (const template of SWSETemplate.fromAttack(this)) {
-            const result = await template.drawPreview();
+            // A cancelled placement (right click / Escape) must not tear down the whole attack.
+            const result = await template.drawPreview().catch(() => null);
             if (result) templates.push(...result);
         }
         return templates;
@@ -1280,14 +1295,18 @@ export class Attack {
             let options = [];
             let range = CONFIG.SWSE.Combat.range[this.range]
             let rangePenalty = CONFIG.SWSE.Combat.rangePenalty
-            for (const entry of Object.entries(range)) {
+            // no range grid (unknown/blank subtype) -> no range bands to choose from, no penalty
+            for (const entry of Object.entries(range ?? {})) {
                 options.push({
                     value: rangePenalty[entry[0]],
                     display: `${entry[0].titleCase()}: ${entry[1].string.titleCase()}`
                 })
             }
 
-            if (options.length === 1) {
+            if (options.length === 0) {
+                // nothing to choose from — don't open an empty dialog that can never be answered
+                distance = 0;
+            } else if (options.length === 1) {
                 distance = options[0].value;
             } else {
                 distance = await selectOption(options, {
@@ -1295,6 +1314,9 @@ export class Attack {
                     content: "Select Range Penalty"
                 }, {});
             }
+        } else if (!location) {
+            // no target location (single target attack without a target) -> no distance, no penalty
+            distance = 0;
         } else {
             let x = token.center.x / canvas.grid.sizeX
             let y = token.center.y / canvas.grid.sizeY
@@ -1324,6 +1346,14 @@ export class Attack {
             }
         }
         if (targetActors.length > 0) return targetActors;
+
+        // A single target attack has no area of effect - it is resolved against whatever the user
+        // targeted.  Sending it through the template pipeline anyway made every untargeted attack
+        // wait forever for a canvas click in SWSETemplate#drawPreview.  Only real area shapes are
+        // placed on the canvas.
+        // `template` (not `targetType`) is what SWSETemplate.fromAttack reads, and it additionally
+        // recognises grenade *ammunition* as an area attack, so it is the authoritative source.
+        if (this.template?.type === Attack.TARGET_TYPES.SINGLE_TARGET) return [];
 
         let templates = await this.placeTemplate()
         const actors = selectActorsByTemplates(templates);
@@ -1360,6 +1390,23 @@ export class Attack {
         };
         response.rangeBreakdown = []
         let attackSummaries = []
+
+        if (targetActors.length === 0) {
+            // No target and no area template (single target attack, or a cancelled placement):
+            // report the rolls anyway.  The chat card renders attack and damage out of
+            // rangeBreakdown, so without an entry the message would come out empty.  There is no
+            // distance without a target, hence no range penalty.
+            response.rangeBreakdown.push({
+                range: "",
+                attack: response.attack,
+                damage: response.damage,
+                damageType: this.type,
+                notes: this.notes,
+                critical,
+                fail: autoMiss,
+                targets: []
+            });
+        }
 
         for (const targetActor of targetActors) {
             let {actors, location} = targetActor;

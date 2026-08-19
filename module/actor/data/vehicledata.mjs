@@ -103,5 +103,8 @@ export class VehicleDataModel extends SystemDataModel.mixin(...vehicleFunctionCl
 
         //Abilities
         this._prepareAbilityDerivedData();
+
+        //Grapple - needs the ability modifiers prepared above
+        this._prepareGrappleDerivedData();
     }
 }

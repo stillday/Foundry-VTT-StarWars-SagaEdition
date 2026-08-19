@@ -3,9 +3,10 @@ import {
     increaseDieType,
     linkEffects,
     toNumber,
+    toStringValue,
     unique
 } from "../common/util.mjs";
-import {sizeArray, uniqueKey} from "../common/constants.mjs";
+import {CHANGE_MODES, sizeArray, uniqueKey} from "../common/constants.mjs";
 import {getInheritableAttribute} from "../attribute-helper.mjs";
 import {changeSize} from "../actor/size.mjs";
 import {SimpleCache} from "../common/simple-cache.mjs";
@@ -21,9 +22,22 @@ import {generateAction} from "../action/generate-action.mjs";
  */
 export class SWSEItem extends Item {
 
+    /**
+     * A **type change** must not merge the old `system` data into the new type's schema.  Foundry
+     * v14 enforces exactly that itself: Document#_updateDiff throws unless `system` is passed as a
+     * `ForcedReplacement` when `type` changes, so that is what is built here.
+     *
+     * The previous implementation set `options.recursive = false` instead, and it did so for *every*
+     * update, because `changed.type` is `undefined` on a normal update and therefore never equal to
+     * `this.type`.  `changed` is already expanded at this point (ClientDatabaseBackend cleans the
+     * update with `expand: true` before calling `_preUpdate`), so `recursive === false` made
+     * `DataModel.##performNonRecursiveUpdate` turn every root key — `system` included — into a
+     * ForcedReplacement: a plain `{"system.equipped": …}` update replaced the entire `system`
+     * object and dropped description, cost, subtype, size and all changes of the item.
+     */
     async _preUpdate(changed, options, user) {
-        if(this.type !== changed.type){
-            options.recursive = false;
+        if (changed.type !== undefined && changed.type !== this.type) {
+            changed.system = foundry.data.operators.ForcedReplacement.create(changed.system ?? {});
         }
         await super._preUpdate(changed, options, user);
         //changed.system = changed.system || {};
@@ -110,7 +124,7 @@ export class SWSEItem extends Item {
             case "cleanup-droidUnarmedDamage":
                 const changes = this.changes.filter(c => c.key !== "droidUnarmedDamage");
                 const mediumSizeDie = this.getMediumSizeDieForDroidAppendage(this.name);
-                changes.push({key: "droidUnarmedDamageScalable", value: mediumSizeDie, mode: CONST.ACTIVE_EFFECT_MODES.ADD})
+                changes.push({key: "droidUnarmedDamageScalable", value: mediumSizeDie, mode: CHANGE_MODES.ADD})
                 this.update({"system.changes": changes})
                 break;
         }
@@ -269,33 +283,96 @@ export class SWSEItem extends Item {
     }
 
     get levels(){
+        // `flags.swse` is absent on effects that were not created by SWSE (core status effects,
+        // module effects), so this has to be read defensively.
         const array = this.effects
-            .filter(e => e.flags.swse.isLevel)
-            .sort((a,b) => a.flags.swse.level - b.flags.swse.level);
+            .filter(e => e.flags?.swse?.isLevel)
+            .sort((a,b) => (a.flags.swse.level ?? 0) - (b.flags.swse.level ?? 0));
         return array
     }
 
     level(level){
-        return this.levels.find(l => l.flags.swse.level === level)
+        return this.levels.find(l => l.flags.swse.level === Number(level))
     }
 
-    addClassLevel(level){
-        let changes = [];
-        let activeEffect = {...DEFAULT_LEVEL_EFFECT};
-        activeEffect.name = `Level ${level}`;
-        activeEffect.level = level;
-        activeEffect.changes = changes;
-        activeEffect.disabled = true;
-
-        if (this.canUserModify(game.user, 'update')) {
-            this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+    /**
+     * Adds one level to this class.
+     *
+     * Two things belong to a class level:
+     *  - a "Level N" ActiveEffect on the class item, holding that level's changes (rolled HP, …).
+     *    It is identified by `flags.swse.level`; the old code wrote a top level `level` property
+     *    instead, which ActiveEffect has no field for, so it was silently dropped.  Without it
+     *    `level(n)` never found the effect (classLevelHealth fell back to 1 HP) and
+     *    `isActiveDocument` in attribute-helper compared `undefined <= n`, so *no* level effect
+     *    ever contributed its changes.
+     *  - the character level it was taken at in `system.levelsTaken` — the same field
+     *    SWSEActor#checkPrerequisitesAndResolveOptions maintains and which drives
+     *    `heroicLevel`/`characterLevel`/`levelSummary`.  The old code never touched it, so
+     *    levelling through this path did not raise the character level at all.
+     *
+     * Idempotent: adding the same class level twice neither duplicates the effect nor the level.
+     * @param {number} level the class level to add
+     * @returns {Promise<SWSEActiveEffect|undefined>} the level effect for that level
+     */
+    async addClassLevel(level){
+        level = Number(level);
+        if (!this.canUserModify(game.user, 'update')) {
+            return undefined;
         }
+
+        let effect = this.level(level);
+        if (!effect) {
+            const activeEffect = foundry.utils.deepClone(DEFAULT_LEVEL_EFFECT);
+            activeEffect.name = `Level ${level}`;
+            activeEffect.flags.swse.level = level;
+            activeEffect.changes = [];
+            // Adopt the disabled state of the level effects this class already has, so a hand added
+            // level behaves exactly like the ones that ship in the compendium (the old code forced
+            // `disabled: true`, contradicting DEFAULT_LEVEL_EFFECT).  Level effects are gated by
+            // `system.levelsTaken` in isActiveDocument (attribute-helper.mjs), not by `disabled`.
+            const sibling = this.levels[0];
+            activeEffect.disabled = sibling ? sibling.disabled : DEFAULT_LEVEL_EFFECT.disabled;
+            [effect] = await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+        }
+
+        // Only an owned class item represents levels a character actually took.
+        if (this.parent instanceof Actor) {
+            const levelsTaken = [...this.levelsTaken];
+            if (levelsTaken.length < level) {
+                const taken = [0];
+                for (const charClass of this.parent.itemTypes.class) {
+                    taken.push(...(charClass.levelsTaken || []));
+                }
+                levelsTaken.push(Math.max(...taken) + 1);
+                await this.safeUpdate({"system.levelsTaken": levelsTaken});
+            }
+        }
+
+        return effect;
     }
 
-    removeClassLevel(level){
-        const id = this.levels.find(l => l.flags.swse.level === level || !l.flags.swse.level).id;
-        if (this.canUserModify(game.user, 'update')) {
-            this.deleteEmbeddedDocuments("ActiveEffect",[id]);
+    /**
+     * Removes one level from this class: the "Level N" effect and, on an owned class item, the last
+     * entry of `system.levelsTaken`.
+     * @param {number} level the class level to remove
+     */
+    async removeClassLevel(level){
+        if (!this.canUserModify(game.user, 'update')) {
+            return;
+        }
+        level = Number(level);
+        // may legitimately find nothing - a class item can carry taken levels without level effects
+        const effect = this.levels.find(l => l.flags.swse.level === level)
+            ?? this.levels.find(l => !l.flags.swse.level);
+        if (effect) {
+            await this.deleteEmbeddedDocuments("ActiveEffect", [effect.id]);
+        }
+
+        if (this.parent instanceof Actor) {
+            const levelsTaken = [...this.levelsTaken];
+            if (levelsTaken.length >= level && levelsTaken.length > 0) {
+                await this.safeUpdate({"system.levelsTaken": levelsTaken.slice(0, level - 1)});
+            }
         }
     }
 
@@ -484,7 +561,7 @@ export class SWSEItem extends Item {
             entity: this,
             attributeKey: "damage"
         });
-        return damage[0]?.value.includes("/");
+        return toStringValue(damage[0]?.value).includes("/");
     }
 
     get availableForFullAttack() {

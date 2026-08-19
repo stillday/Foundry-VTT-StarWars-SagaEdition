@@ -60,12 +60,15 @@ export class ShieldFunctions {
             system.shields.value = system.shields.max;
 
         //Failure Chance
+        // "MAX" reduces with an initial value of `undefined` (util.mjs maxValue), so an actor
+        // without any shieldFailureChance change ended up with `shields.failureChance: undefined`.
+        // No shield failure source means no failure chance.
         let failureChance = getInheritableAttribute({
             entity: actor,
             attributeKey: "shieldFailureChance",
             reduce: "MAX",
         });
-        system.shields.failureChance = failureChance;
+        system.shields.failureChance = failureChance ?? 0;
 
         //Active
         let active = !!actor.effects.find(

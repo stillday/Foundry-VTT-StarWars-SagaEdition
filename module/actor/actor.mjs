@@ -13,6 +13,7 @@ import {
     toChat,
     toNumber,
     toShortAttribute,
+    toStringValue,
     unique
 } from "../common/util.mjs";
 import {formatPrerequisites, meetsPrerequisites} from "../prerequisite.mjs";
@@ -101,6 +102,25 @@ class SWSEActor extends Actor {
     }
 
 
+    /**
+     * Builds the update that migrates a legacy `npc` / `npc-vehicle` actor onto its modern type.
+     *
+     * Foundry v14 rejects a type change unless `system` is supplied as a ForcedReplacement
+     * (Document#_updateDiff, common/abstract/document.mjs) — "The type of a Document may only be
+     * changed if the system field is also updated with a ForcedReplacement operator."  A
+     * ForcedReplacement replaces the whole `system` object, so it has to carry the complete
+     * existing system data; sending only `system.settings.isNPC` (the previous behaviour, combined
+     * with `operation.recursive = false` in updateDocuments) wiped every other system field of the
+     * actor.
+     * @param {string} type the actor type to migrate to
+     * @returns {{type: string, system: object}}
+     */
+    buildTypeCoercionUpdate(type) {
+        const system = foundry.utils.deepClone(this._source.system ?? {});
+        system.settings = {...(system.settings ?? {}), isNPC: true};
+        return {type, system: foundry.data.operators.ForcedReplacement.create(system)};
+    }
+
     handleActorLinks(system) {
         for (let link of this.actorLinks) {
             let linkedActor = fromUuidSync(link.uuid);
@@ -119,19 +139,16 @@ class SWSEActor extends Actor {
 
         if (this.id) {
             if (this.type === "npc") {
-                this.safeUpdate({"type": "character", "system.settings.isNPC": true}, {updateChanges: false});
+                this.safeUpdate(this.buildTypeCoercionUpdate("character"), {updateChanges: false});
             } else if (this.type === "npc-vehicle") {
-                this.safeUpdate({
-                    "type": "vehicle",
-                    "system.settings.isNPC": true
-                }, {updateChanges: false});
+                this.safeUpdate(this.buildTypeCoercionUpdate("vehicle"), {updateChanges: false});
 
-            } else if (system.settings.isNPC && this.prototypeToken.actorLink) {
+            } else if (system.settings?.isNPC && this.prototypeToken.actorLink) {
                 const documents = canvas.tokens?.placeables
                     ?.filter(t => t.actor?.id === this.id)
                     .map(t => t.document) ?? [];
                 this.setActorLinkOnActorAndTokens(documents, false);
-            } else if (!system.settings.isNPC && !this.prototypeToken.actorLink) {
+            } else if (system.settings && !system.settings.isNPC && !this.prototypeToken.actorLink) {
                 const documents = canvas.tokens?.placeables
                     ?.filter(t => t.actor?.id === this.id)
                     .map(t => t.document) ?? [];
@@ -313,8 +330,20 @@ class SWSEActor extends Actor {
                 update._id = this. _id //.id;
             }
 
-            if(Object.hasOwn(update, "type")){
-                operation.recursive = false;
+            // Only a *real* type change may skip the recursive merge.  A non-recursive update turns
+            // every root key of the update (`system` included) into a ForcedReplacement, so keeping
+            // this unconditional replaced the whole `system` object of the actor on every update
+            // that happened to carry a `type` (see SWSEItem#_preUpdate for the same regression).
+            // The one type change SWSE itself performs — the npc/npc-vehicle coercion in
+            // handleActorLinks — now supplies `system` as a ForcedReplacement holding the complete
+            // data (buildTypeCoercionUpdate), so it is unaffected by this flag either way.  The flag
+            // remains as a safety net for third-party callers that change `type` without one, since
+            // Foundry v14 would otherwise reject their update outright.
+            if (Object.hasOwn(update, "type")) {
+                const existing = operation.parent?.items?.get(update._id) ?? game.actors.get(update._id);
+                if (!existing || existing.type !== update.type) {
+                    operation.recursive = false;
+                }
             }
         }
         return await this.database.update(this.implementation, operation, user);
@@ -1001,6 +1030,11 @@ class SWSEActor extends Actor {
 
     initializeCharacterSettings() {
         this.settings = [];
+        // The "computer" actor type has no `settings` block in template.json and no registered
+        // DataModel, so it has no character settings to expose. Bail out instead of throwing:
+        // Foundry aborts the entire prepareData run on an exception, which leaves the actor
+        // without derived data and makes its sheet unrenderable.
+        if (!this.system?.settings) return;
         this.settings.push({type: "boolean", path: "system.settings.isNPC", label: "Is NPC", value: this.system.settings.isNPC})
         this.settings.push({type: "boolean", path: "system.settings.autoSizeToken", label: "Autosize Token based on actor size?", value: this.system.settings.autoSizeToken})
         this.settings.push({type: "boolean", path: "system.settings.allowSheetLighting", label: "Allow Sheet to modify token lighting", value: this.system.settings.allowSheetLighting})
@@ -1141,7 +1175,14 @@ class SWSEActor extends Actor {
                 })
 
                 if (attributes.length === 0) {
-                    attributes.push({type: "Stationary", value: 0});
+                    // No item grants a speed (no species yet, homebrew, import).  `system.speed.base`
+                    // is the persisted base speed of the actor and is what the npc sheet edits.
+                    // ASSUMPTION: falling back to it (schema initial 6 squares) is better than
+                    // reporting "Stationary 0" for a character that simply has no species item yet.
+                    const base = this.system.speed?.base;
+                    attributes.push(Number.isFinite(base) && base > 0
+                        ? {type: "Walking", value: base}
+                        : {type: "Stationary", value: 0});
                 }
                 let armorType = this.heaviestArmorType;
 
@@ -1599,9 +1640,13 @@ class SWSEActor extends Actor {
                         attributeKey: "isHeroic",
                         reduce: "OR"
                     })) {
-                        heroicLevel += co.system.levelsTaken.length;
+                        heroicLevel += co.levelsTaken.length;
                     }
-                    charLevel += co.system.levelsTaken.length;
+                    // `system.levelsTaken` is not part of template.json and is only written by
+                    // checkPrerequisitesAndResolveOptions, so a class item that was created any
+                    // other way (compendium copy, import, createEmbeddedDocuments) has none.
+                    // SWSEItem#levelsTaken defaults to [] and is what `get classes` already uses.
+                    charLevel += co.levelsTaken.length;
                 }
                 return heroicLevel;
             }
@@ -2677,7 +2722,7 @@ class SWSEActor extends Actor {
         const provideTypes = ['FEAT', 'TALENT']
         const providedItems = []
         for (const s of provided) {
-            const toks = s.value.split(":");
+            const toks = toStringValue(s.value).split(":");
             const parent = {name: s.sourceString, id: s.source ,type: "UNKNOWN"}
 
             if(provideTypes.includes(toks[0].toUpperCase())){
@@ -3025,7 +3070,7 @@ class SWSEActor extends Actor {
 
     handleAbilityScore() {
 
-        const attributeGeneration = this.system.settings.attributeGeneration;
+        const attributeGeneration = this.system.settings?.attributeGeneration;
         this.system.finalAttributeGenerationType = attributeGeneration;
 
         this.system.sheetType = "Auto"

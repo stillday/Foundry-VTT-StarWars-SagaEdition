@@ -1,5 +1,6 @@
 import {getInheritableAttribute} from "../attribute-helper.mjs";
 import {generateAction} from "../action/generate-action.mjs";
+import {toBoolean} from "../common/util.mjs";
 
 //import * as fields from "../data/fields.mjs";
 
@@ -39,14 +40,30 @@ export class SWSEActiveEffect extends ActiveEffect {
         }
     }
 
+    /**
+     * Overridden only so that SWSE's own `transfer` getter (below, driven by a "transfer" change)
+     * is honoured.  Mirrors ActiveEffect#target in Foundry v14 (client/documents/active-effect.mjs).
+     * `CONFIG.ActiveEffect.legacyTransferral` was removed in v14 and always read as undefined here,
+     * so its branch was dead code and is dropped.
+     * @returns {SWSEActor|SWSEItem|null}
+     */
     get target() {
         if ( this.parent instanceof Actor ) return this.parent;
-        if ( CONFIG.ActiveEffect.legacyTransferral ) return this.transfer ? null : this.parent;
         return this.transfer ? (this.parent.parent ?? null) : this.parent;
     }
+    /**
+     * SWSE drives ActiveEffect transferral from a "transfer" change rather than the core flag.
+     *
+     * Read type-tolerantly: Foundry v14 runs `JSON.parse` over every string change value while
+     * migrating ActiveEffects (BaseActiveEffect.#migrateChangeValue in
+     * common/documents/active-effect.mjs), so a stored "true" now reads back as the boolean `true`.
+     * Values still authored as strings in SWSE's own `system.changes` must keep working, hence
+     * `toBoolean` instead of a `=== "true"` comparison.
+     * @returns {boolean}
+     */
     get transfer(){
         const inheritableAttribute = this.changes.find(change => change.key === "transfer")
-        return inheritableAttribute?.value === "true"
+        return toBoolean(inheritableAttribute?.value ?? false)
     }
 
     set transfer(value) {
@@ -137,7 +154,11 @@ export class SWSEActiveEffect extends ActiveEffect {
         }
 
 
-        await this.safeUpdate({disabled, "system.disabled": disabled}, {recursive: false});
+        // NOTE: must stay recursive.  In Foundry v14 an ActiveEffect's `changes` array lives at
+        // `system.changes` (BaseActiveEffect.migrateData moves it there), so a non-recursive update
+        // turns the root key `system` into a ForcedReplacement and every change on the effect is
+        // destroyed by simply enabling/disabling it.
+        await this.safeUpdate({disabled, "system.disabled": disabled});
     }
 
     get isDisabled(){

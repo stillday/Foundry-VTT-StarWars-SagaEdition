@@ -87,6 +87,9 @@ export class CharacterDataModel extends SystemDataModel.mixin(...characterFuncti
         //Abilities
         this._prepareAbilityDerivedData();
 
+        //Grapple - needs the ability modifiers prepared above
+        this._prepareGrappleDerivedData();
+
         //Skills
         this._prepareSkillDerivedData();
 
@@ -267,6 +270,15 @@ export class CharacterDataModel extends SystemDataModel.mixin(...characterFuncti
                 );
             }
 
+            if (!type) {
+                // The character has no available item bucket this talent's tree could be booked
+                // against (e.g. "Surge" only lists Scout/Outlaw talent trees and the character has
+                // neither class).  That is a legitimate character state, not an error, and there is
+                // nothing to reduce — the parallel code path SWSEActor#reduceAvailableItem is
+                // deliberately silent about it too.
+                continue;
+            }
+
             system.#_reduceAvailable(type);
         }
     }
@@ -341,7 +353,10 @@ export class CharacterDataModel extends SystemDataModel.mixin(...characterFuncti
 
         if (!type && !backupType) {
             if (!KNOWN_WEIRD_UNITS.includes(actor.name)) {
-                console.error(
+                // Diagnostic only: this is reached on every recompute for data states the callers
+                // are expected to filter (see #_validateAvailableTalents), so it must not be an
+                // error.  Kept at debug level to mirror SWSEActor#reduceAvailableItem.
+                console.debug(
                     "tried to reduce undefined on: " + actor.name,
                     actor
                 );

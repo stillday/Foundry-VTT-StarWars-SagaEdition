@@ -1,5 +1,6 @@
 import {SWSEActiveEffect} from "../active-effect/active-effect.mjs";
 import {addBlankMode, addBlankModificationEffect} from "./util.mjs";
+import {CHANGE_MODES} from "./constants.mjs";
 
 export function onChangeControl(event) {
     event.preventDefault();
@@ -12,7 +13,9 @@ export function onChangeControl(event) {
         case 'add':
             update = {};
             update[updatePath] = changes;
-            update[updatePath].push({key: "", mode: 2, value: ""});
+            // SWSE's own system.changes use the numeric CHANGE_MODES, not v14's ActiveEffect
+            // change `type` strings.
+            update[updatePath].push({key: "", mode: CHANGE_MODES.ADD, value: ""});
             break;
         case 'delete':
             let index = element.data("index")
@@ -47,7 +50,10 @@ export function onEffectControl(event){
     let element = $(event.currentTarget);
     let effectId = element.data("effectId");
     if(effectId){
-        console.warn("onEffectControl should not use effectId")
+        // The mode/modification lists on the item, character and vehicle sheets still identify their
+        // effects by id; that path works (see below), so this is a design note, not a problem worth
+        // an error on every click.
+        console.debug("onEffectControl should not use effectId")
     }
     let effectUuid = element.data("effectUuid");
 
@@ -63,7 +69,14 @@ export function onEffectControl(event){
         doc = this.object.effects.get(effectId)
     }
 
-    switch (element.data("type")){
+    const type = element.data("type");
+    // "add-mode"/"add-modification" operate on the sheet's document, everything else needs the effect.
+    if (!doc && !["add-mode", "add-modification"].includes(type)) {
+        console.warn(`onEffectControl: no ActiveEffect resolved for ${type}`, {effectId, effectUuid});
+        return;
+    }
+
+    switch (type){
         case 'view':
             doc.sheet.render(true);
             break;
@@ -71,7 +84,11 @@ export function onEffectControl(event){
             parentDoc.deleteEmbeddedDocuments("ActiveEffect", [effectId]);
             break;
         case 'disable':
-            fromUuidSync(effectUuid).disable(!event.currentTarget.checked)
+            // Use the effect resolved above.  Looking it up by UUID a second time broke every mode
+            // toggle rendered from a template that only carries `data-effect-id` (the weapon/armor
+            // mode lists on the item, character and vehicle sheets): `fromUuidSync(undefined)`
+            // returns null in v14, so this threw instead of toggling the mode (issue #549).
+            doc.disable(!event.currentTarget.checked)
             break;
         case "add-modification":
             addBlankModificationEffect.call(parentDoc);
@@ -210,10 +227,19 @@ export function onToggle(event) {
     this.object.safeUpdate(data);
 }
 
+/**
+ * The change list this sheet edits.  Only ever an Actor's or Item's own `system.changes`:
+ * `templates/change/change-list.hbs` — the only template that binds `data-action="change-control"`
+ * to this handler — is included exclusively with `changes=actor.changes` / `changes=item.changes`
+ * (actor-sheet.hbs, character-sheet.hbs, vehicle-sheet.hbs, item-sheet.hbs).
+ *
+ * There used to be an ActiveEffect branch returning the root path `changes`.  In Foundry v14 that
+ * path no longer exists as a writable field — an ActiveEffect's changes live in `system.changes` and
+ * the root `changes` is only a compatibility accessor — so an `update({changes: […]})` is pruned by
+ * `SchemaField#clean` and silently discarded.  ActiveEffect change editing is handled by
+ * SWSEActiveEffectConfig#onChangeControl instead, so the branch is gone rather than fixed here.
+ */
 function getChanges() {
-    if (this.object instanceof SWSEActiveEffect) {
-        return {changes: this.object.changes || [], updatePath: 'changes'}
-    }
     return {changes: this.object.system.changes || [], updatePath: 'system.changes'}
 }
 

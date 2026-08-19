@@ -65,7 +65,13 @@ export class HealthFunctions {
 
         //Update totals
         system.health.bonusHP = resolveValueArray(others, actor);
-        system.health.max = system.overrides.health ?? system.health.override ?? resolveValueArray(healthBonuses, actor);
+        // Hit points are derived from class levels.  A character without a single class level has no
+        // derived maximum at all, which reported `health.max: 0` next to `health.value: 10`.  Fall
+        // back to the stored maximum in that case so the maximum is never below the current value.
+        // ASSUMPTION: a classless character keeps the persisted health.max (schema initial 10).
+        const derivedMax = system.overrides.health ?? system.health.override ?? resolveValueArray(healthBonuses, actor);
+        const storedMax = actor._source?.system?.health?.max ?? 0;
+        system.health.max = (Number.isFinite(derivedMax) && derivedMax > 0) ? derivedMax : storedMax;
         system.health.multipliers = multipliers;
         system.health.override = actor.system.health.override;
     }
