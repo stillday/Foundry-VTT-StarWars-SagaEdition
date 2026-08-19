@@ -167,6 +167,20 @@ global.Item = class extends global.foundry.documents.Item {
 
 global.ActiveEffect = global.foundry.documents.ActiveEffect;
 
+// Foundry's notification bar.  SWSE reports failed document creations through it (a rejected
+// create resolves to [] / undefined instead of throwing, see ClientDatabaseBackend), so tests
+// need to be able to observe those messages.
+global.ui = {
+  notifications: {
+    messages: [],
+    error(msg) { this.messages.push({type: "error", msg}); return msg; },
+    warn(msg) { this.messages.push({type: "warn", msg}); return msg; },
+    info(msg) { this.messages.push({type: "info", msg}); return msg; },
+    notify(msg) { this.messages.push({type: "info", msg}); return msg; }
+  },
+  windows: {}
+};
+
 global.game = {
   user: { id: "test-user", name: "Test User" },
   settings: {

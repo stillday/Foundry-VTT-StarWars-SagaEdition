@@ -281,3 +281,131 @@ test('SWSEItem#levels ignores effects without flags.swse (F5)', () => {
     expect(() => item.levels).to.not.throw();
     expect(item.levels.map(l => l.name)).to.deep.equal(["Level 1", "Level 2"]);
 });
+
+/* -------------------------------------------------------------------------- */
+/*  F6: item copies must carry a schema valid ActiveEffect duration           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Builds the situation SWSEActor#checkPrerequisitesAndResolveOptions is in: an item whose
+ * ActiveEffects have been prepared, so `duration.value` is the derived `Infinity` that Foundry v14's
+ * ActiveEffect#prepareBaseData writes, while `_source.duration` still holds the stored, schema
+ * valid values.
+ */
+function itemWithPreparedEffects(effectSpecs) {
+    const item = Object.create(SWSEItem.prototype);
+    item.system = {changes: []};
+    item.name = "Beast";
+    item.type = "class";
+    const contents = effectSpecs.map((spec, i) => ({
+        _id: spec._id ?? `effect${i}`,
+        name: spec.name,
+        _source: {duration: spec.sourceDuration}
+    }));
+    item.effects = {
+        contents,
+        get: id => contents.find(e => e._id === id),
+        [Symbol.iterator]: function* () { yield* contents; }
+    };
+    // stands in for Document#toObject, which returns the *derived* duration for source === false
+    item.__super = {
+        effects: effectSpecs.map((spec, i) => ({
+            _id: spec._id ?? `effect${i}`,
+            name: spec.name,
+            duration: spec.derivedDuration
+        }))
+    };
+    return item;
+}
+
+test('SWSEItem#toObject(false) takes effect durations from _source, not from derived data (F6)', () => {
+    const item = itemWithPreparedEffects([
+        {
+            name: "Level 1",
+            // measured in the live client: prepareBaseData does `duration.value ??= Infinity` and
+            // _prepareDuration assigns seconds/remaining/label on top
+            derivedDuration: {value: Infinity, units: "seconds", expiry: null, expired: false,
+                _worldTime: 0, seconds: Infinity, remaining: Infinity, label: "None"},
+            sourceDuration: {value: null, units: "seconds", expiry: null, expired: false}
+        },
+        {
+            name: "Level 2",
+            derivedDuration: {value: Infinity, units: "seconds", expiry: null, expired: false},
+            sourceDuration: {value: null, units: "seconds", expiry: null, expired: false}
+        },
+        {
+            // a real, finite duration must survive untouched
+            name: "Timed Mode",
+            derivedDuration: {value: 6, units: "rounds", expiry: "turnStart", expired: false,
+                seconds: 36, remaining: 6, label: "6 Rounds"},
+            sourceDuration: {value: 6, units: "rounds", expiry: "turnStart", expired: false}
+        }
+    ]);
+
+    // Document#toObject is not available on the mock, so drive the override against a stub super
+    const superToObject = Object.getPrototypeOf(SWSEItem.prototype).toObject;
+    Object.getPrototypeOf(SWSEItem.prototype).toObject = function () {
+        return {system: {changes: []}, effects: foundry.utils.deepClone(this.__super.effects)};
+    };
+    try {
+        const copy = item.toObject(false);
+        expect(copy.effects.length).to.equal(3);
+        // Infinity is a number but not an integer, and duration.value is
+        // NumberField({integer: true}) in v14 -> the create was rejected for every level effect
+        for (const effect of copy.effects) {
+            expect(effect.duration.value === null || Number.isInteger(effect.duration.value),
+                `${effect.name}: ${effect.duration.value}`).to.equal(true);
+            // the derived-only keys must not travel along either
+            expect(Object.keys(effect.duration).sort()).to.deep.equal(["expired", "expiry", "units", "value"]);
+        }
+        expect(copy.effects[0].duration.value).to.equal(null);
+        expect(copy.effects[2].duration).to.deep.equal({value: 6, units: "rounds", expiry: "turnStart", expired: false});
+    } finally {
+        Object.getPrototypeOf(SWSEItem.prototype).toObject = superToObject;
+    }
+});
+
+test('SWSEItem#toObject(true) is left alone (F6)', () => {
+    const item = itemWithPreparedEffects([{
+        name: "Level 1",
+        derivedDuration: {value: Infinity, units: "seconds"},
+        sourceDuration: {value: null, units: "seconds"}
+    }]);
+    const superToObject = Object.getPrototypeOf(SWSEItem.prototype).toObject;
+    let sawSource;
+    Object.getPrototypeOf(SWSEItem.prototype).toObject = function (source) {
+        sawSource = source;
+        return {system: {changes: []}, effects: [{_id: "effect0", duration: {value: null, units: "seconds"}}]};
+    };
+    try {
+        item.toObject();
+        expect(sawSource).to.equal(true);   // default must stay `true`, as in Foundry
+        item.toObject(true);
+        expect(sawSource).to.equal(true);
+    } finally {
+        Object.getPrototypeOf(SWSEItem.prototype).toObject = superToObject;
+    }
+});
+
+test('addClassLevel reports a rejected effect creation instead of half applying the level (F6)', async () => {
+    const parent = new Actor({name: "Padawan", system: {}});
+    const item = Object.create(SWSEItem.prototype);
+    item.system = {levelsTaken: []};
+    item.name = "Jedi";
+    item.type = "class";
+    item.canUserModify = () => true;
+    item.effects = [];
+    // exactly what createEmbeddedDocuments returns when the data fails validation: an empty array
+    item.createEmbeddedDocuments = async () => [];
+    Object.defineProperty(item, "parent", {value: parent});
+    Object.defineProperty(item, "isFollowerTemplate", {value: false});
+    parent.itemTypes.class = [item];
+    let updated = false;
+    item.safeUpdate = async () => { updated = true; };
+
+    ui.notifications.messages.length = 0;
+    const effect = await item.addClassLevel(1);
+    expect(effect).to.equal(undefined);
+    expect(updated, "levelsTaken must not grow without a level effect").to.equal(false);
+    expect(ui.notifications.messages.filter(m => m.type === "error").length).to.equal(1);
+});
