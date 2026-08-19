@@ -1,0 +1,14 @@
+{{!-- SWSE's stylesheet pins `.sheet-header` to a 210px band for the tall actor/item sheets. An effect
+      sheet only needs a single icon+name row, so the flex basis and icon size are relaxed inline rather
+      than by adding selectors to scss/. --}}
+<header class="sheet-header" style="flex: 0 0 auto; align-items: center;">
+    <img class="profile-img" src="{{source.img}}" data-action="editImage" data-edit="img"
+         style="flex: 0 0 64px; height: 64px;"
+         alt="{{localize 'EFFECT.FIELDS.img.label'}}" data-tooltip aria-label="{{source.name}}">
+    <div class="header-fields">
+        <h1>
+            <span class="effect-title" data-action="direct-field" data-type="string"
+                  data-name="name">{{source.name}}</span>
+        </h1>
+    </div>
+</header>

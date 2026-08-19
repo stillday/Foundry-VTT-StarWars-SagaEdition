@@ -1,0 +1,59 @@
+<!-- No `changes` class here on purpose: core's .active-effect-config .tab.changes rules lay the
+     rows out as a 5-column grid with `li { display: contents }`, which overrides SWSE's flex row. -->
+<section class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <header class="change-list-header flexrow">
+        <div class="key" data-tooltip aria-label="{{localize 'CHANGE.KeyTT'}}">{{localize "CHANGE.Key"}}</div>
+        <div class="mode" data-tooltip
+             aria-label="{{localize 'EFFECT.ModeDescription'}}">{{localize "EFFECT.FIELDS.changes.element.type.label"}}</div>
+        <div class="priority" data-tooltip
+             aria-label="{{localize 'EFFECT.PriorityDescription'}}">{{localize "CHANGE.Priority"}}</div>
+        <div class="value">{{localize "CHANGE.Value"}}</div>
+        <div class="change-controls">
+            <a class="change-control" data-action="change-control" data-action-type="add"><i
+                    class="far fa-plus-square"></i></a>
+        </div>
+    </header>
+    <ol class="change-list scrollable">
+        {{#each changes as |change|}}
+            <li class="effect-change change flexcol collapsible-container" data-index="{{change.index}}">
+                <div class="flexrow" style="width:100%">
+                    {{#if change.registered}}
+                        <div class="key">{{formInput ../fields.key name=change.keyPath value=change.key}}</div>
+                        <div class="mode">
+                            {{formInput ../fields.type name=change.typePath value=change.type
+                                        choices=../changeTypes}}
+                        </div>
+                        <div class="priority">
+                            {{formInput ../fields.priority name=change.priorityPath value=change.priority
+                                        placeholder=change.defaultPriority}}
+                        </div>
+                        <div class="value">
+                            {{formInput ../fields.value name=change.valuePath value=change.value
+                                        elementType="input"}}
+                        </div>
+                    {{else}}
+                        <div class="key unregistered notification warning">
+                            {{localize "EFFECT.CHANGES.Unregistered" type=change.type}}
+                        </div>
+                    {{/if}}
+                    <div class="change-controls">
+                        {{!-- ephemeral show/hide of this row's detail area (common/util.mjs onCollapseToggle) --}}
+                        <a class="change-control collapse-toggle" data-action="collapse-toggle"><i
+                                class="fas {{#if change.toggled}}fa-minus{{else}}fa-plus{{/if}}"></i></a>
+                        {{!-- persisted per-change flag in flags.swse.toggles (common/listeners.mjs onToggle) --}}
+                        <a class="change-control toggle" data-action="toggle" data-toggle-id="{{change.toggleId}}"><i
+                                class="fas {{#if change.toggled}}fa-eye{{else}}fa-eye-slash{{/if}}"></i></a>
+                        <a class="change-control" data-action="change-control" data-action-type="delete"
+                           data-index="{{change.index}}"><i class="fas fa-trash"></i></a>
+                    </div>
+                </div>
+                <div class="collapsible"
+                     style="display: {{#if change.toggled}}grid{{else}}none{{/if}}">
+                    {{#if change.registered}}
+                        {{formGroup ../fields.phase name=change.phasePath value=change.phase}}
+                    {{/if}}
+                </div>
+            </li>
+        {{/each}}
+    </ol>
+</section>
