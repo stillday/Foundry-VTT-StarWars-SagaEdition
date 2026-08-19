@@ -91,11 +91,34 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
      * @returns {string}
      */
     static buildFilterString(request = {}) {
-        const split = request.filterString?.split(" ") ?? [];
+        const split = request.filterString?.split(" ").filter(t => t.length) ?? [];
         if (request.pack) {
             split.push(("-pack:" + request.pack).replace(/ /g, "_"));
         }
-        return split.join(" ");
+        // The trailing separator is load bearing.  The box is pre-filled with these filter terms and
+        // the caret sits at their end, so the first character a user types would otherwise be glued
+        // onto the last token: "-type:class" + "S" -> "-type:classS".  `do_filter` still sees a
+        // single "-" term, `generateFilter` turns it into a `-type` filter for "classS" and tests it
+        // against `item.type`, which nothing matches - so typing a name empties the list instead of
+        // narrowing it.  With the space the typed text becomes its own search term.
+        return split.length ? split.join(" ") + " " : "";
+    }
+
+    /**
+     * Put the filter terms into the search box and leave the caret behind them.
+     *
+     * `do_filter` tokenises on spaces, so a search term only works as a search term when it is a
+     * token of its own; parking the caret at the end is what makes that the natural outcome of
+     * "open the picker, start typing".
+     */
+    _primeSearchBox() {
+        const input = this.element?.find?.('input[name="search"]')?.[0];
+        if (!input) return;
+        input.value = this.defaultString;
+        try {
+            input.focus({preventScroll: true});
+            input.setSelectionRange(input.value.length, input.value.length);
+        } catch { /* not a text input; nothing to place */ }
     }
 
     /**
@@ -114,8 +137,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         if (request.actionModifier !== undefined) {
             this.options.actionModifier = request.actionModifier;
         }
-        const search = this.element?.find?.('input[name="search"]');
-        if (search?.length) search.val(this.defaultString);
+        this._primeSearchBox();
         this.do_filter(this.defaultString);
         // An instance that is still inside `getData()` has no element yet, and `bringToTop()` reads
         // `this.element[0]` unguarded.  Only raise a window that is actually on screen.
@@ -405,6 +427,26 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     #progressBar;
 
     /**
+     * Dismiss the loading notification.
+     *
+     * `Notifications##fetch` only schedules the automatic removal for notifications that are neither
+     * `permanent` nor `progress` (client/applications/ui/notifications.mjs), so a progress
+     * notification stays on screen until somebody removes it.  Nothing did, which left a
+     * "Loading Compendium Browser 100%" bar parked over the top centre of the interface for the rest
+     * of the session - on top of the sheet controls that live there, swallowing their clicks.
+     */
+    #finishProgress() {
+        try { this.#progressBar?.remove?.(); } catch { /* already gone */ }
+        this.#progressBar = undefined;
+    }
+
+    /** @inheritDoc */
+    async close(...args) {
+        this.#finishProgress();
+        return super.close(...args);
+    }
+
+    /**
      * The `system.*` paths the browser needs on top of what core already indexes.
      *
      * `Item.metadata.compendiumIndexFields` (common/documents/item.mjs) is
@@ -500,6 +542,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
             this._fetchGeneralFilters();
             // Lazy load
             await this._initLazyLoad();
+            // Everything is in: take the loading bar down again.
+            this.#finishProgress();
             // The header counters are rendered from _gatherData, which resolves before this promise
             // does, so at render time both were still 0.  Fill them in once the items are actually
             // there instead of leaving the window claiming "0 of 0".
@@ -588,7 +632,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
 
         let search = html.find('input[name="search"]');
         search.keyup(this._onFilterResults.bind(this));
-        search.val(this.defaultString)
+        this._primeSearchBox();
 
         html.each((i, li) => {
             li.addEventListener("drop", (ev) => this._onDrop(ev));

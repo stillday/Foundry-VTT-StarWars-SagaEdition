@@ -20,8 +20,14 @@
                 Winds/Day</label>
             <input class="left-input" id="secondWind" type="text" placeholder="" disabled/>
             {{#times actor.secondWind.perDay}}
-                <input class="left-control-{{this}}" data-action="toggle-second-wind" title="Spent" type="checkbox" data-name="system.secondWind.toggles.{{this}}"
-                       {{#if (lookup ../actor.system.secondWind.toggles this)}}checked{{/if}}>
+                {{!-- The spent flags live at system.toggles.secondWinds.<n>: that is the path the
+                      schema declares (CommonData `toggles` is the free-form ObjectField) and the one
+                      HealthFunctions._prepareSecondWinds and SWSEActor#toggles read.  The checkbox
+                      used to write system.secondWind.toggles.<n> instead - `secondWind` is not a
+                      declared field, so the DataModel dropped the update and ticking the box stored
+                      nothing at all. --}}
+                <input class="left-control-{{this}}" data-action="toggle-second-wind" title="Spent" type="checkbox" data-name="system.toggles.secondWinds.{{this}}"
+                       {{#if (lookup ../actor.system.toggles.secondWinds this)}}checked{{/if}}>
             {{/times}}
         </div>
 
