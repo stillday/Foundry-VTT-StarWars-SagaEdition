@@ -16,6 +16,7 @@ import {activateChoices} from "../choice/choice.mjs";
 import {formatPrerequisites, meetsPrerequisites} from "../prerequisite.mjs";
 import {resolveEntity} from "../compendium/compendium-util.mjs";
 import {generateAction} from "../action/generate-action.mjs";
+import {deleteEffectsSafely} from "../active-effect/active-effect.mjs";
 /**
  * Extend the basic Item with some very simple modifications.
  * @extends {Item}
@@ -332,7 +333,17 @@ export class SWSEItem extends Item {
             // `system.levelsTaken` in isActiveDocument (attribute-helper.mjs), not by `disabled`.
             const sibling = this.levels[0];
             activeEffect.disabled = sibling ? sibling.disabled : DEFAULT_LEVEL_EFFECT.disabled;
-            [effect] = await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+            // createEmbeddedDocuments swallows validation errors and returns [] (see
+            // ClientDatabaseBackend##preCreateDocumentArray), so never assume a document came back:
+            // without the level effect `system.levelsTaken` must not grow either, or the class
+            // reports a level it has no changes for.
+            [effect] = await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]) ?? [];
+            if (!effect) {
+                const message = `Could not create the level ${level} effect on ${this.name}.`;
+                console.error(message, activeEffect);
+                ui.notifications?.error(message);
+                return undefined;
+            }
         }
 
         // Only an owned class item represents levels a character actually took.
@@ -1257,8 +1268,19 @@ export class SWSEItem extends Item {
     }
     _onDeleteDescendantDocuments(parent, collection, documents, ids, options, userId) {
         super._onDeleteDescendantDocuments(parent, collection, documents, ids, options, userId);
-        const providedEffectIds = this.effects.filter(effect => ids.includes(effect.flags.swse.providedBy || "") ).map(effect => effect.id)
-            this.deleteEmbeddedDocuments("ActiveEffect", providedEffectIds);
+        // Only react to this item's own effects, and only on the client that triggered the deletion -
+        // otherwise every connected client asked the server to delete the same provided effects and
+        // all but the first rejected with `ActiveEffect "<id>" does not exist!`.  `flags.swse` is
+        // optional on an ActiveEffect, so it has to be read defensively.
+        if (collection !== "effects" || parent !== this || userId !== game.user.id) return;
+        const providedEffectIds = this.effects
+            .filter(effect => ids.includes(effect.flags?.swse?.providedBy || "\u0000"))
+            .map(effect => effect.id);
+        if (!providedEffectIds.length) return;
+        // Synchronous hook: this cannot be awaited, so attach a handler and let deleteEffectsSafely
+        // drop anything that is already gone or already queued for deletion.
+        deleteEffectsSafely(this, providedEffectIds)
+            .catch(e => console.warn(`SWSE | could not remove effects provided by ${ids.join(", ")} on ${this.name}`, e));
     }
 
     _crawlProvidedItems(data, funct) {
@@ -1772,7 +1794,10 @@ export class SWSEItem extends Item {
             let changes = [];
             changes.push(...Object.values(item.system.attributes || {}))
             changes.push(...item.system.changes)
-            let activeEffect = DEFAULT_MODIFICATION_EFFECT;
+            // deepClone: DEFAULT_MODIFICATION_EFFECT is a shared module level constant.  Assigning
+            // it directly mutated that constant and pushed the *same* object once per item, so a
+            // multi item call ended up with N copies of the last modification.
+            let activeEffect = foundry.utils.deepClone(DEFAULT_MODIFICATION_EFFECT);
             activeEffect.name = item.name;
             activeEffect.changes = changes;
             activeEffect.img = item.img;
@@ -1787,14 +1812,24 @@ export class SWSEItem extends Item {
         }, {});
 
 
-        const createdEffects = await this.createEmbeddedDocuments("ActiveEffect", effectsFromItems);
+        // May legitimately be empty (no modifications), and comes back empty when the data was
+        // rejected - createEmbeddedDocuments does not throw.
+        const createdEffects = await this.createEmbeddedDocuments("ActiveEffect", effectsFromItems) ?? [];
+        if (effectsFromItems.length && !createdEffects.length) {
+            const message = `Could not add ${effectsFromItems.length} modification effect(s) to ${this.name}.`;
+            console.error(message, effectsFromItems);
+            ui.notifications?.error(message);
+            return false;
+        }
 
         const effects = []
         for (const createdEffect of createdEffects) {
             let item = itemMap[createdEffect.origin]
-            if (item.effects && item.effects.filter(i => i).length > 0) {
+            if (item?.effects && item.effects.filter(i => i).length > 0) {
                 item.effects.forEach(effect => {
-                    let activeEffect = {...DEFAULT_MODE_EFFECT};
+                    // deepClone, not spread: a shallow copy shares `flags`, so writing
+                    // flags.swse.providedBy below poisoned the shared DEFAULT_MODE_EFFECT.
+                    let activeEffect = foundry.utils.deepClone(DEFAULT_MODE_EFFECT);
                     activeEffect.name = effect.name;
                     activeEffect.disabled = effect.disabled;
                     activeEffect.changes = effect.changes;
@@ -1808,8 +1843,16 @@ export class SWSEItem extends Item {
             }
         }
 
-        await this.createEmbeddedDocuments("ActiveEffect", effects);
-
+        if (effects.length) {
+            const createdModes = await this.createEmbeddedDocuments("ActiveEffect", effects) ?? [];
+            if (!createdModes.length) {
+                const message = `Could not add ${effects.length} mode effect(s) to ${this.name}.`;
+                console.error(message, effects);
+                ui.notifications?.error(message);
+                return false;
+            }
+        }
+        return true;
     }
 
 
@@ -1826,19 +1869,27 @@ export class SWSEItem extends Item {
         let changes = [];
         changes.push(...Object.values(item.system.attributes || {}))
         changes.push(...item.system.changes)
-        let activeEffect = DEFAULT_MODIFICATION_EFFECT;
+        let activeEffect = foundry.utils.deepClone(DEFAULT_MODIFICATION_EFFECT);
         activeEffect.name = item.name;
         activeEffect.changes = changes;
         activeEffect.img = item.img;
         activeEffect.origin = item.uuid;
         activeEffect.flags.swse.description = item.system.description;
 
-        const createdEffect = await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]);
+        // Returns [] instead of throwing when the data fails validation, so `createdEffect[0]`
+        // below would silently be `undefined`.
+        const createdEffect = await this.createEmbeddedDocuments("ActiveEffect", [activeEffect]) ?? [];
+        if (!createdEffect[0]) {
+            const message = `Could not add the modification "${activeEffect.name}" to ${this.name}.`;
+            console.error(message, activeEffect);
+            ui.notifications?.error(message);
+            return false;
+        }
 
         if (item.effects && item.effects.filter(i => i).length > 0) {
             const effects = []
             item.effects.forEach(effect => {
-                let activeEffect = {...DEFAULT_MODE_EFFECT};
+                let activeEffect = foundry.utils.deepClone(DEFAULT_MODE_EFFECT);
                 activeEffect.name = effect.name;
                 activeEffect.disabled = effect.disabled;
                 activeEffect.changes = effect.changes;
@@ -1850,8 +1901,15 @@ export class SWSEItem extends Item {
                     effect.flags.swse.description || "";
                 effects.push(activeEffect);
             })
-            await this.createEmbeddedDocuments("ActiveEffect", effects);
+            const createdModes = await this.createEmbeddedDocuments("ActiveEffect", effects) ?? [];
+            if (effects.length && !createdModes.length) {
+                const message = `Could not add ${effects.length} mode effect(s) to ${this.name}.`;
+                console.error(message, effects);
+                ui.notifications?.error(message);
+                return false;
+            }
         }
+        return true;
     }
 
     createActiveEffectFromMode(mode) {
@@ -1868,12 +1926,44 @@ export class SWSEItem extends Item {
         };
     }
 
-    toObject(source) {
+    /**
+     * SWSE copies items with `toObject(false)` (see SWSEActor#checkPrerequisitesAndResolveOptions)
+     * because it mutates the *derived* item - payload substitution, `addProvidedItems`,
+     * `addItemAttributes` - before handing the data to `createEmbeddedDocuments`.
+     *
+     * In Foundry v14 the derived data of an ActiveEffect is deliberately not schema conformant:
+     * `ActiveEffect#prepareBaseData` runs `this.duration.value ??= Infinity`
+     * (client/documents/active-effect.mjs), while the schema declares
+     * `duration.value: new NumberField({required: true, nullable: true, integer: true, min: 0})`
+     * (common/documents/active-effect.mjs).  `Infinity` is a number but not an integer, so a class
+     * item copied this way failed validation once per level effect
+     * ("effects: N: duration: value: must be an integer"), `#preCreateDocumentArray` dropped the
+     * document and `createEmbeddedDocuments` returned an empty array.
+     *
+     * SWSE never authors effect durations, so the stored source duration is always the correct one.
+     * `_source.duration` has passed `SchemaField#clean`, therefore it is guaranteed schema valid and
+     * free of the legacy `seconds`/`rounds`/`turns` shims that `Document#toObject` re-adds.
+     * @param {boolean} [source=true] draw values from the data source rather than derived values
+     * @returns {object} item data safe to pass to `create`/`createEmbeddedDocuments`
+     */
+    toObject(source = true) {
         let o = super.toObject(source);
 
         let changes = Array.isArray(o.system.changes) ? o.system.changes : Object.values(o.system.changes || {});
         let cost = changes.find(c => !!c && c.key === "cost") ?? null;
         o.system.cost = (cost) ? cost["value"] : "0";
+
+        if (!source && Array.isArray(o.effects)) {
+            // EmbeddedCollectionField#toObject preserves collection order, so index is a safe
+            // fallback for effects that carry no _id yet.
+            const effects = this.effects?.contents ?? (Array.isArray(this.effects) ? this.effects : []);
+            o.effects.forEach((effectData, index) => {
+                const effect = (effectData._id ? this.effects?.get?.(effectData._id) : null) ?? effects[index];
+                const sourceDuration = effect?._source?.duration;
+                if (sourceDuration) o.effects[index].duration = foundry.utils.deepClone(sourceDuration);
+                else delete effectData.duration; // let the schema supply its initial values
+            });
+        }
         return o;
     }
 }

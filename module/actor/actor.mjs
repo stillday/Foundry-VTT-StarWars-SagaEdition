@@ -28,6 +28,7 @@ import {SWSE} from "../common/config.mjs";
 import {AttackDelegate} from "./attack/attackDelegate.mjs";
 import {cleanItemName, resolveEntity} from "../compendium/compendium-util.mjs";
 import {VALIDATORS} from "./actor-item-validation.js";
+import {deleteEffectsSafely} from "../active-effect/active-effect.mjs";
 import {generateAction} from "../action/generate-action.mjs";
 import {ActorAmmunitionDelegate} from "../item/ammunition/ammunitionDelegate.mjs";
 import {WeightDelegate} from "./weightDelegate.mjs";
@@ -262,12 +263,20 @@ class SWSEActor extends Actor {
         super._onCreateDescendantDocuments(parent, collection, documents, data, options, userId);
 
         //remove other condition ActiveEffects.  should identifying a condition ActiveEffect be done differently?
-        if ("effects" === collection) {
+        // `parent === this` keeps the event that bubbled up from an owned Item out of here, and
+        // `userId === game.user.id` keeps every other connected client from issuing the same deletion.
+        if ("effects" === collection && parent === this && userId === game.user.id) {
             let activeEffect = documents[0];
-            if (activeEffect.statuses.filter(status => status.startsWith('condition')).size > 0) {
-                this.effects
+            if (activeEffect?.statuses.filter(status => status.startsWith('condition')).size > 0) {
+                const stale = this.effects
                     .filter(effect => effect !== activeEffect && effect.statuses.filter(status => status.startsWith('condition')).size > 0)
-                    .map(effect => effect.delete())
+                    .map(effect => effect.id);
+                // Document hooks are synchronous, so this cannot be awaited.  deleteEffectsSafely
+                // drops ids that are already gone or already being deleted by clearGroupedEffect,
+                // which is what turned a condition change into an
+                // `ActiveEffect "<id>" does not exist!` unhandled rejection.
+                deleteEffectsSafely(this, stale)
+                    .catch(e => console.warn(`SWSE | condition cleanup on ${this.name} failed`, e));
             }
         }
     }
@@ -1327,6 +1336,18 @@ class SWSEActor extends Actor {
      * might make this the default after looking at it
      */
     async setGroupedEffect(effectGrouper, changeValue, skipRenderOnClear = false) {
+        // The `condition` and `gravity` setters cannot await this, so two UI events in quick
+        // succession used to overlap: both runs read the same effect list and both requested the
+        // deletion of the same condition effect, and the loser rejected with
+        // `ActiveEffect "<id>" does not exist!`.  Serialise the grouped-effect swaps per actor.
+        const previous = this._groupedEffectQueue ?? Promise.resolve();
+        const run = previous.catch(() => {})
+            .then(() => this.#setGroupedEffect(effectGrouper, changeValue, skipRenderOnClear));
+        this._groupedEffectQueue = run.catch(() => {});
+        return run;
+    }
+
+    async #setGroupedEffect(effectGrouper, changeValue, skipRenderOnClear = false) {
         let localEffect = this.effects.find(e => {
             return e.changes && e.changes.find(c => c.key === effectGrouper && c.value === changeValue);
         })
@@ -1335,8 +1356,10 @@ class SWSEActor extends Actor {
             return e.changes && e.changes.find(c => c.key === effectGrouper && c.value === changeValue);
         })
 
-        if(localEffect){
-            statusEffect.changes = localEffect.changes;
+        if (statusEffect && localEffect) {
+            // Copy rather than mutate: `statusEffect` is the shared CONFIG.statusEffects entry, so
+            // assigning to it leaked this actor's changes into every other actor's condition effects.
+            statusEffect = {...statusEffect, changes: localEffect.changes};
         }
         //only skip the refresh if we are adding a new effect, not if we are only removing
         await this.clearGroupedEffect(effectGrouper, skipRenderOnClear && !!statusEffect);
@@ -1349,19 +1372,24 @@ class SWSEActor extends Actor {
      */
     async clearGroupedEffect(effectGrouper, skipRenderOnClear = false) {
         const ids = [];
+        const disabling = [];
         for (const effect of this.effects) {
             if(effect.statuses.find(status => status.startsWith(effectGrouper))){
                 if(effect.origin){
                     if(!effect.isDisabled){
-                        effect.disable(true)
+                        disabling.push(effect.disable(true))
                     }
                 } else {
                     ids.push(effect.id);
                 }
             }
         }
+        await Promise.all(disabling);
 
-        await this.deleteEmbeddedDocuments("ActiveEffect", ids, {render: !skipRenderOnClear});
+        // deleteEffectsSafely skips ids that are already gone or already queued for deletion by
+        // another cleanup path, so a repeated clear cannot produce
+        // `ActiveEffect "<id>" does not exist!`.
+        await deleteEffectsSafely(this, ids, {render: !skipRenderOnClear});
     }
 
     changeShields(number) {
@@ -1387,7 +1415,14 @@ class SWSEActor extends Actor {
         createData["statuses"] = [statusEffect.id]
         delete createData.id;
         const cls = getDocumentClass("ActiveEffect");
-        await cls.create(createData, {parent: this});
+        // create() resolves to undefined when the data fails validation - it does not throw.
+        const createdCondition = await cls.create(createData, {parent: this});
+        if (!createdCondition) {
+            const message = `Could not apply the condition "${createData.name}" to ${this.name}.`;
+            console.error(message, createData);
+            ui.notifications?.error(message);
+        }
+        return createdCondition;
     }
 
     /**
@@ -1555,7 +1590,13 @@ class SWSEActor extends Actor {
 
         let item = { name: "Change", type: "trait", system:{changes: [change]} };
 
-        await this.createEmbeddedDocuments("Item", [item], {render: false, noHook: true, noRenderTemplate: true})
+        const created = await this.createEmbeddedDocuments("Item", [item], {render: false, noHook: true, noRenderTemplate: true})
+        if (!created?.length) {
+            const message = `Could not add the change ${JSON.stringify(change)} to ${this.name}.`;
+            console.error(message, item);
+            ui.notifications?.error(message);
+        }
+        return created?.[0];
         //await this.safeUpdate(update);
     }
 
@@ -1598,10 +1639,16 @@ class SWSEActor extends Actor {
      * @return {*}
      */
     static getActorAttribute(actor, attributeName, options) {
-        let attributes = actor.attributes;
-        let attribute = attributes[toShortAttribute(attributeName).toLowerCase()];
-
-        return attribute.total;
+        // The abilities schema (module/actor/data/templates/abilities.mjs) stores the ability SCORE in
+        // `value` and the derived d20 modifier in `mod`.  There has never been a `total`, so this used
+        // to return `undefined` for every attribute, which silently disabled every ATTRIBUTE
+        // prerequisite (`!(undefined < 13)` is true) and the Beast multiclass Intelligence gate.
+        // Both callers compare against an ability score ("STR 13", "INT < 3"), hence `value`;
+        // `SWSEActor#getAttributeMod` remains the accessor for the modifier.
+        const shortName = toShortAttribute(attributeName);
+        if (!shortName) return undefined;
+        const attribute = actor?.attributes?.[shortName.toLowerCase()];
+        return attribute?.value;
     }
 
     getHalfCharacterLevel(round = "down") {
@@ -1784,7 +1831,10 @@ class SWSEActor extends Actor {
 
     get handleLevelBasedAttributeBonuses() {
 
-        if (this.system.attributeGenerationType === "Manual") {
+        // `system.attributeGenerationType` does not exist; `handleAbilityScore()` derives
+        // `system.finalAttributeGenerationType` from `system.settings.attributeGeneration`.  Reading the
+        // non-existent key meant manual-generation characters still got level-based attribute bonuses.
+        if (this.system.finalAttributeGenerationType === "Manual") {
             return 0;
         }
 
@@ -2454,7 +2504,20 @@ class SWSEActor extends Actor {
             providedItemContext.provided = true;
             providedItemContext.skipPrerequisite = true;
 
-            addedItem = (await this.createEmbeddedDocuments("Item", [entity.toObject(false)], {render: false, noHook: true, noRenderTemplate: true}))[0];
+            // NOTE: createEmbeddedDocuments does NOT throw on invalid data.  Foundry v14's
+            // ClientDatabaseBackend##preCreateDocumentArray catches the DataModelValidationError,
+            // routes it through Hooks.onError and `continue`s, so `_createDocuments` returns an
+            // empty array (client/data/client-backend.mjs).  Every result must be checked, or the
+            // next line dereferences `undefined` and the whole add chain dies with a TypeError
+            // instead of telling the user that nothing was added.
+            const created = await this.createEmbeddedDocuments("Item", [entity.toObject(false)], {render: false, noHook: true, noRenderTemplate: true});
+            addedItem = created?.[0];
+            if (!addedItem) {
+                const message = `Could not add ${entity.type ?? "item"} "${entity.name ?? "?"}" to ${this.name}: the item data was rejected. See the console for the validation error.`;
+                console.error(message, entity);
+                ui.notifications?.error(message);
+                return {addedItem: undefined, toBeAdded: []};
+            }
             nonMods.forEach(item => item.parent = addedItem)
             toBeAdded.push(...nonMods);
 

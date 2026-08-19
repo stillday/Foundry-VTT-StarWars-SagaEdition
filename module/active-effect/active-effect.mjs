@@ -5,6 +5,41 @@ import {toBoolean} from "../common/util.mjs";
 //import * as fields from "../data/fields.mjs";
 
 /**
+ * Delete ActiveEffects from a parent document without ever asking the server twice for the same
+ * document.
+ *
+ * Several SWSE cleanup paths can legitimately run for the same effect: a condition change clears the
+ * previous condition in `SWSEActor#clearGroupedEffect` while `_onCreateDescendantDocuments` prunes
+ * leftover condition effects, and deleting a mode effect on an item cascades to the effects it
+ * provided.  Those paths cannot await one another (document hooks are synchronous), so they used to
+ * issue overlapping delete requests for one id and the loser rejected with
+ * `ActiveEffect "<id>" does not exist!` as an unhandled rejection.  Filtering out ids whose document
+ * is already gone - or already on its way out - removes the duplicate request itself.
+ *
+ * @param {Actor|Item} parent    the document owning the effects
+ * @param {string[]} ids         candidate ActiveEffect ids
+ * @param {object} [options]     forwarded to deleteEmbeddedDocuments
+ * @returns {Promise<Document[]>} the documents that were actually deleted
+ */
+export async function deleteEffectsSafely(parent, ids, options = {}) {
+    if (!parent) return [];
+    const pending = parent.__pendingEffectDeletions ??= new Set();
+    const toDelete = [];
+    for (const id of ids ?? []) {
+        if (!id || pending.has(id)) continue;
+        if (!parent.effects?.get(id)) continue;
+        pending.add(id);
+        toDelete.push(id);
+    }
+    if (!toDelete.length) return [];
+    try {
+        return (await parent.deleteEmbeddedDocuments("ActiveEffect", toDelete, options)) ?? [];
+    } finally {
+        for (const id of toDelete) pending.delete(id);
+    }
+}
+
+/**
  * Extend the base ActiveEffect entity
  * @extends {ActiveEffect}
  */
