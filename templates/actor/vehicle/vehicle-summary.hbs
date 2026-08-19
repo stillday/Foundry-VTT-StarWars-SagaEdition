@@ -52,7 +52,9 @@
 
     <div class="consumables medium labeled-input">
         <label for="consumables" class="text">Consumables</label>
-        <input class="input" id="consumables" type="text"  name="system.vehicle.cargoCapacity.consumables" value="{{actor.system.vehicle.consumables}}" placeholder=""/>
+        {{!-- the name pointed at system.vehicle.cargoCapacity.consumables, which does not exist;
+              the value was already reading the correct path. --}}
+        <input class="input" id="consumables" type="text"  name="system.vehicle.consumables" value="{{actor.system.vehicle.consumables}}" placeholder=""/>
     </div>
 
     <div class="cost medium labeled-input">
@@ -90,7 +92,10 @@
 
     <div class="small labeled-input">
         <label for="challenge" class="text">CL</label>
-        <input class="input" id="challenge" name="system.cl" type="text" value="{{actor.system.cl}}" placeholder=""/>
+        {{!-- system.cl is a SchemaField {value:Number}; rendering it printed "[object Object]" and
+              writing a string into it was rejected.  system.details.cl is the StringField the
+              character sheet already uses and it is part of the vehicle schema too. --}}
+        <input class="input" id="challenge" name="system.details.cl" type="text" value="{{actor.system.details.cl}}" placeholder=""/>
     </div>
 
 

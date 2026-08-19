@@ -126,14 +126,27 @@ export class AbilityFunctions {
 
             // Prepare the roll data
             let totalModifiers = ability.mod + (this.health.condition ?? 0);
-            let label = CONFIG.SWSE.Abilities.abilitiesShort[key];
+            // CONFIG.SWSE.Abilities.abilitiesShort holds localization keys ("SWSE.AbilityShortStr"),
+            // and none of them exist in lang/en.json, so this was putting the raw key into the roll
+            // label the chat card prints ("SWSE.AbilityShortStr Modifer").  Localize it and fall
+            // back to the plain abbreviation whenever the key is missing.
+            const shortKey = CONFIG.SWSE.Abilities.abilitiesShort[key];
+            const localizedShort = shortKey ? game.i18n?.localize(shortKey) : undefined;
+            let label = (!localizedShort || localizedShort === shortKey) ? key.toUpperCase() : localizedShort;
 
             ability.label = key.toUpperCase();
 
-            let rollLabel = label + " Modifer";
+            // The ability check formula.  `actor-ability-scores.hbs` renders this into the
+            // rollable label's data-roll/title, and it feeds the @<KEY>ROLL resolved variable.
+            // It used to exist only as a resolved variable, so the template interpolated an
+            // undefined `attribute.roll` and produced the formula "1d20 + ", which made every
+            // click on an ability label throw a Roll parse error instead of rolling.
+            ability.roll = "1d20" + (totalModifiers < 0 ? " - " : " + ") + Math.abs(totalModifiers);
+
+            let rollLabel = label + " Modifier";
             actor.setResolvedVariable(
                 "@" + key.toUpperCase() + "ROLL",
-                "1d20" + (totalModifiers ? " + " : " - ") + totalModifiers,
+                ability.roll,
                 rollLabel,
                 rollLabel
             );

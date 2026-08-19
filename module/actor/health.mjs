@@ -42,7 +42,13 @@ export function resolveShield(actor) {
     });
     let active = !!actor.effects.find(effect => effect.statuses && effect.statuses.has('shield') && effect.disabled === false);
     shields.value = value;
-    shields.failureChance = failureChance;
+    // `SWSEActor#shields` calls this legacy resolver and it writes straight back into
+    // `actor.system.shields`, so it overwrote the value the DataModel already derived in
+    // ShieldFunctions._prepareShieldsDerivedData (data/templates/shields.mjs).  "MAX" reduces from
+    // an initial `undefined` (util.mjs maxValue), so an actor without any shieldFailureChance
+    // source ended up back at `system.shields.failureChance === undefined` as soon as the sheet
+    // rendered - which is why the fix in the DataModel appeared to have no effect.
+    shields.failureChance = failureChance ?? 0;
     shields.active = active;
     return shields;
 }

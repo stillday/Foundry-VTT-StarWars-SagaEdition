@@ -12,7 +12,7 @@
             <div class="flex-row">
                 <div class="medium labeled-input" >
                     <div class="input rollable draggable" data-label="{{attribute.label}}" data-variable="@{{attribute.label}}ROLL" data-type="ability"
-                         title="Roll 1d20 + {{attribute.roll}}"  data-roll="1d20 + {{attribute.roll}}">{{attribute.label}}</div>
+                         title="Roll {{attribute.roll}}"  data-roll="{{attribute.roll}}">{{attribute.label}}</div>
                 </div>
             {{#ifContains ../actor.system.finalAttributeGenerationType (array "Semi-Manual" "Manual")}}
                 <div class="small labeled-input">
@@ -23,6 +23,7 @@
             {{#unlessContains ../actor.system.finalAttributeGenerationType (array "Manual")}}
                 <div class="small labeled-input">
                     <input class="input" type="number" value="{{attribute.value}}"
+                           title="Derived from ability generation type &quot;{{../actor.system.finalAttributeGenerationType}}&quot; and therefore not editable here. Use the assignment button below this table, enter a temporary modifier in the Temp column, or set Ability Generation Type to Manual on the Settings tab."
                            placeholder="0" disabled/>
                 </div>
             {{/unlessContains}}
@@ -40,13 +41,13 @@
     {{#unless actor.system.lockAttributes}}
         <div class="flex flex-row">
             {{#ifEquals actor.system.finalAttributeGenerationType "Roll"}}
-                <div class="rollAbilities" title="Roll Abilities"><a><i class="fas fa-edit"></i></a></div>
+                <div class="rollAbilities clickable" title="Roll Abilities"><a><i class="fas fa-edit"></i> Roll Abilities</a></div>
             {{/ifEquals}}
             {{#ifEquals actor.system.finalAttributeGenerationType "Standard Array"}}
-                <div class="assignStandardArray" title="Assign Ability Scores"><a><i class="fas fa-edit"></i></a></div>
+                <div class="assignStandardArray clickable" title="Assign Ability Scores"><a><i class="fas fa-edit"></i> Assign Standard Array</a></div>
             {{/ifEquals}}
             {{#ifEquals actor.system.finalAttributeGenerationType "Point Buy"}}
-                <div class="assignAttributePoints" title="Assign Ability Points"><a><i class="fas fa-edit"></i></a>
+                <div class="assignAttributePoints clickable" title="Assign Ability Points"><a><i class="fas fa-edit"></i> Assign Ability Points</a>
                 </div>
             {{/ifEquals}}
             {{#unlessEquals actor.system.finalAttributeGenerationType "Manual"}}

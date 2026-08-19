@@ -134,12 +134,12 @@
                 <div class="tab items" data-group="primary" data-tab="feats">
                     {{> 'swse.item-list' bigLabel="Feats" compendiumFilter="-type:feat" container="items-list" fields=
                     (arr "Source" "Prerequisites") items=actor.itemTypes.feat draggable=false quantity=false
-                    delete="unSupplied" overrideDelete=system.settings.ignorePrerequisites.value
+                    delete="unSupplied" overrideDelete=actor.system.settings.ignorePrerequisites
                     description="expandable" controls='<button class="flex-0" style="flex-basis:180px"
                         data-action="gm-bonus">Add GM Bonus</button>'}}
                     {{> 'swse.item-list' bigLabel="Talents" compendiumFilter="-type:talent" container="items-list"
                     fields= (arr "Source" "Prerequisites") items=actor.itemTypes.talent draggable=false quantity=false
-                    delete="unSupplied" overrideDelete=system.settings.ignorePrerequisites.value
+                    delete="unSupplied" overrideDelete=actor.system.settings.ignorePrerequisites
                     description="expandable"}}
                 </div>
 
@@ -147,7 +147,7 @@
                 <div class="tab items" data-group="primary" data-tab="traits">
                     {{> 'swse.item-list' bigLabel="Traits" compendiumFilter="-type:trait" container="items-list" fields=
                     (arr "Source" "Prerequisites") items=traits draggable=false quantity=false delete="unSupplied"
-                    overrideDelete=system.settings.ignorePrerequisites.value description="expandable" controls='<button
+                    overrideDelete=actor.system.settings.ignorePrerequisites description="expandable" controls='<button
                         class="flex-0" style="flex-basis:180px" data-action="gm-bonus">Add GM Bonus</button>'}}
                 </div>
 

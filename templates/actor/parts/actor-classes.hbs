@@ -38,8 +38,10 @@
                            data-item="{{class.id}}" data-item-attribute="rolledHp" data-level="{{class.classLevel}}"
                            data-roll="{{class.levelUpHitPoints}}"><i class="fas fa-dice"></i>
                         </a>{{/if}}</td>
-                <td>{{../actor.system.attributes.con.mod}}</td>
-                <td>{{sum class.classLevelHealth ../actor.system.attributes.con.mod}}</td>
+                {{!-- system.attributes was renamed to system.abilities in the DataModel port
+                      (AbilityFields.migrateData), so both cells rendered empty. --}}
+                <td>{{../actor.system.abilities.con.mod}}</td>
+                <td>{{sum class.classLevelHealth ../actor.system.abilities.con.mod}}</td>
             {{/unless}}
             <td class="item-controls">
                 <a data-action="view" class="item-control" title="View Class Description"><i

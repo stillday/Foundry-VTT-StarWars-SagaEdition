@@ -71,13 +71,18 @@ export class DefenseFunctions {
 
         if (["vehicle", "npc-vehicle"].includes(actor.type)) {
             if (actor.pilot) {
-                let armorBonus = actor.pilot.items.filter(
-                    (i) =>
-                        i.type === "class" &&
-                        Object.values(i.system.attributes).find(
-                            (a) => a.key === "isHeroic"
-                        ).value
-                ).length;
+                // A class item whose attributes carry no `isHeroic` entry made `.find(...)` return
+                // undefined and `.value` throw, which aborted the whole derived data run for the
+                // vehicle.  Class data lives in `system.changes` since the DataModel port, so check
+                // both and treat "no entry" as not heroic.
+                let armorBonus = actor.pilot.items.filter((i) => {
+                    if (i.type !== "class") return false;
+                    const entries = [
+                        ...(i.system?.changes ?? []),
+                        ...Object.values(i.system?.attributes ?? {})
+                    ];
+                    return !!entries.find((a) => a?.key === "isHeroic")?.value;
+                }).length;
                 return Math.max(armorBonus, armorReflexDefenseBonus);
             } else {
                 return armorReflexDefenseBonus;
@@ -273,7 +278,12 @@ export class DefenseFunctions {
     resolvedRef(condition) {
         const system = this;
         const actor = system.parent;
-        let reflexDefense = system.defense?.ref ?? {};
+        // Read `defense.reflex`, the key this result is stored under, not `defense.ref`.
+        // `ref` is the persisted npc/vehicle schema field, so on those actors the returned object
+        // *was* `defense.ref`: `defense.reflex = resolvedRef()` then aliased it, both carried
+        // `defenseBlock`, and actor-defenses.hbs rendered the Reflex row twice.  Characters never
+        // showed it because their schema has no `ref` key (DefenseFields.character).
+        let reflexDefense = system.defense?.reflex ?? {};
 
         /** @type {{value: number, type: string}[]} */
         let bonuses = [];

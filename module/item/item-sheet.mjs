@@ -168,7 +168,7 @@ export class SWSEItemSheet extends foundry.appv1.sheets.ItemSheet {
     }
 
 
-    _onToChat(event) {
+    async _onToChat(event) {
         event.preventDefault();
         const a = event.currentTarget;
         const itemId = a.dataset.actionItem;
@@ -178,18 +178,29 @@ export class SWSEItemSheet extends foundry.appv1.sheets.ItemSheet {
         let item;
 
         if (actorId) {
-            const actor = game.actors.get(actorId);
-            item = actor.items.find(item => item._id === itemId);
+            item = game.actors.get(actorId)?.items.get(itemId);
         } else if (actionCompendium) {
-            let compendium = game.packs.find(pack => pack.collection === actionCompendium);
-            item = compendium.get(itemId)
+            // A compendium's documents are not necessarily loaded, so `pack.get(id)` returns
+            // undefined until they are.  getDocument loads on demand.
+            const compendium = game.packs.get(actionCompendium);
+            item = compendium ? await compendium.getDocument(itemId) : undefined;
         } else {
             item = game.items.get(itemId);
         }
 
-        let content = item.description || item.system?.description
+        // Fall back to the document this sheet renders: an unlinked item (created on the fly, or
+        // living in a pack this client has not registered) is still shareable.
+        item ??= this.object;
+        if (!item) {
+            console.warn(`SWSEItemSheet._onToChat: no item resolved`, {itemId, actorId, actionCompendium});
+            return;
+        }
 
-        toChat(content, this.object.parent, item.name)
+        const content = item.description || item.system?.description;
+
+        // Pass the item, not a hand-picked actor: toChat walks to the owning Actor for embedded
+        // items and speaks as the current user for world/compendium items, which have no Actor.
+        return toChat(content, item, item.name);
     }
 
 

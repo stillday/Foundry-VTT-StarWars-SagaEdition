@@ -15,8 +15,10 @@
 
     <div class="large labeled-input numeric-override" data-override="{{def.override}}" data-override-name="{{def.name}}"
          data-override-key="system.defense.{{toLowercase def.name}}.override">
+        {{!-- No `name`: the field is disabled and derived, and the path it carried
+              (system.attributes.<id>.manual) has not existed since the DataModel port. --}}
         <input class="input" type="text" value="{{def.total}}"
-               placeholder="" name="system.attributes.{{id}}.manual" disabled/>
+               placeholder="" disabled/>
     </div>
 
 

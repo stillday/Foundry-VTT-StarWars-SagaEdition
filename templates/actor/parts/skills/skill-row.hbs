@@ -25,7 +25,11 @@
 
 {{#unless disableTrained}}
     <td>
-        {{#if skill.isClass}}
+        {{!-- Also render the marker for a trained skill that is not a class skill.  `skill.trained`
+              can be set from `trainedSkills`/`trainedSkillsFirstLevel` or left over from an earlier
+              class choice, and the +5 applies either way (skills.mjs:295), so hiding the checkbox
+              made the bonus look like it came from nowhere. --}}
+        {{#if (or skill.isClass skill.trained)}}
             <label title="trained skills get an additional +5">
                 <input class="skill direct"
                        type="checkbox"

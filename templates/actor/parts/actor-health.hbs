@@ -99,7 +99,11 @@
     <div class="flex-row">
         <div class="labeled-input">
             <label for="forcePoints">Force Points</label>
-            <input id="forcePoints" class="left-input" type="number" name="system.forcePoints.quantity" value="{{actor.forcePoints.quantity}}"
+            {{!-- system.forcePoints is a NumberField (TraitsFields), so submitting
+                  system.forcePoints.quantity was discarded by SchemaField#clean and the field could
+                  not be edited.  SWSEActor#forcePoints reshapes the number into {quantity, roll} for
+                  reading, which is why the value still displayed. --}}
+            <input id="forcePoints" class="left-input" type="number" name="system.forcePoints" value="{{actor.forcePoints.quantity}}"
                    data-dtype="Number"/>
             <div class="control-0">
                 <a class="rollable" title="Roll {{actor.forcePoints.roll}}" data-label="Force Point" data-roll="{{actor.forcePoints.roll}}"><i class="fas fa-dice-d20"></i></a>
@@ -121,13 +125,13 @@
                    value="{{actor.shields.max}}" placeholder="" disabled/>
         </div>
         <div class="divider"></div>
+        {{!-- One Failure Chance readout.  There used to be two: the first left a stray "<" in the
+              markup, the second was a copy of the Fortitude block and displayed
+              actor.defense.fort.total under a "Failure Chance" label. --}}
         {{#if actor.shields.failureChance}}
-            <div class="labeled-input"><label>Failure Chance</label><div class="plain input static">{{actor.shields.failureChance}}</div><</div>
-
             <div class="labeled-input">
                 <label for="failureChance">Failure Chance</label>
-                <input class="middle-input" id="failureChance" type="text"
-                       value="{{actor.defense.fort.total}}" placeholder="" disabled/>
+                <div class="middle-input plain input static" id="failureChance">{{actor.shields.failureChance}}</div>
             </div>
         {{/if}}
         <div class="labeled-input">

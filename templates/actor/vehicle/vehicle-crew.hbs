@@ -2,7 +2,11 @@
     {{#if actor.crew.hasCrewQuality}}
         <div class="crew-quality medium labeled-input">
             <label class="resource-label" for="crew-quality">Crew Quality</label>
-            <select id="crew-quality" name="system.crewQuality.quality">
+            {{!-- The schema field is system.crewQuality (a StringField restricted to
+                  CREW_QUALITIES, read by CrewDelegate); system.crewQuality.quality is the pre DataModel
+                  path and both the name and the #select argument were still using it, so the dropdown
+                  never showed the stored quality and never saved a new one. --}}
+            <select id="crew-quality" name="system.crewQuality">
                 {{#select actor.system.crewQuality}}
                     <option value="Untrained">Untrained</option>
                     <option value="Normal">Normal</option>

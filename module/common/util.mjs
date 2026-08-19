@@ -1478,12 +1478,16 @@ export function linkEffects(effectId1, effectId2) {
 
 export function addBlankModificationEffect() {
     if (this.canUserModify(game.user, 'update')) {
-        this.createEmbeddedDocuments("ActiveEffect", [{...DEFAULT_MODIFICATION_EFFECT}]);
+        // deepClone, not a shallow spread: the spread copied only the top level, so every created
+        // effect shared the constant's `changes` array and `flags.swse` object.  Document
+        // construction runs cleanData over the data it is handed and mutates it in place, which
+        // poisons the shared module constant for the rest of the session.
+        this.createEmbeddedDocuments("ActiveEffect", [foundry.utils.deepClone(DEFAULT_MODIFICATION_EFFECT)]);
     }
 }
 export function addBlankMode() {
     if (this.canUserModify(game.user, 'update')) {
-        this.createEmbeddedDocuments("ActiveEffect", [{...DEFAULT_MODE_EFFECT}]);
+        this.createEmbeddedDocuments("ActiveEffect", [foundry.utils.deepClone(DEFAULT_MODE_EFFECT)]);
     }
 }
 
@@ -1626,8 +1630,44 @@ function getChatType(context) {
     return CONST.CHAT_MESSAGE_STYLES.OOC;
 }
 
-export function toChat(content, actor = undefined, flavor="", context={}) {
-    let speaker = ChatMessage.getSpeaker({actor: actor || this.object.parent});
+/**
+ * Resolve the Actor that should be credited as the speaker of a chat message.
+ *
+ * Callers hand in whatever they happen to have: an Actor, an embedded Item (whose `parent` is the
+ * Actor), a world or compendium Item (which has no Actor at all), or a sheet-like object exposing
+ * `object`/`document`.  Returns undefined when no Actor can be found; that is a legitimate outcome
+ * for a world item, and {@link ChatMessage.getSpeaker} then falls back to the acting User.
+ *
+ * @param {*} candidate                   Anything that might lead to an Actor.
+ * @param {number} [depth=0]              Recursion guard.
+ * @returns {Actor|undefined}
+ */
+function resolveSpeakerActor(candidate, depth = 0) {
+    if (!candidate || depth > 4) return undefined;
+    if (candidate instanceof Actor) return candidate;
+    const nested = candidate.actor ?? candidate.parent ?? candidate.document ?? candidate.object;
+    if (!nested || nested === candidate) return undefined;
+    return resolveSpeakerActor(nested, depth + 1);
+}
+
+/**
+ * Post content to chat.
+ *
+ * @param {string} content                The message body.
+ * @param {Actor|Item|object} [speakerSource]  The Actor to speak as, or anything owned by one.
+ * @param {string} [flavor]
+ * @param {object} [context]
+ */
+export function toChat(content, speakerSource = undefined, flavor="", context={}) {
+    // `toChat` is a module function, so `this` is undefined whenever it is called as a plain
+    // function rather than through a sheet.  It used to fall back to `this.object.parent`, which
+    // threw a TypeError for every caller that could not supply an Actor - notably the item sheet's
+    // Share button on a world item, whose `parent` is null (issue: F2).  Resolve the speaker from
+    // the argument, and only then from a bound sheet, and accept "no Actor" as a valid answer.
+    const actor = resolveSpeakerActor(speakerSource)
+        ?? resolveSpeakerActor(this?.object)
+        ?? resolveSpeakerActor(this?.document);
+    let speaker = ChatMessage.getSpeaker(actor ? {actor} : {});
 
     let messageData = {
         author: game.user.id,
@@ -1682,12 +1722,15 @@ function performAttack(actor, type, attackKey, macro) {
 
 export function attackOptions(actor) {
     const options = [];
-    
+
+    // v14 ContextMenuEntry: `label` instead of `name` and `onClick(event, target)` instead of
+    // `callback(target, event)`; both old spellings are deprecated since v14 and removed in v16
+    // (client/applications/ux/context-menu.mjs).  The sheets construct these menus with
+    // `jQuery: false`, so `target` is an HTMLElement and `target.dataset` is the way in.
     options.push({
-        name: "Attack or Add Macro with options",
+        label: "Attack or Add Macro with options",
         icon: '<i class="fas fa-edit"/>',
-        callback: async (element) => {
-            console.log("Context menu clicked", element);
+        onClick: async (event, element) => {
 
             const type = element.dataset.action;
             const attackKey = element.dataset.attackKey;
@@ -1735,10 +1778,9 @@ export function attackOptions(actor) {
 export function numericOverrideOptions(actor) {
     let options = [];
     options.push({
-        name: "Set Override",
+        label: "Set Override",
         icon: '<i class="fas fa-edit">',
-        callback: async (element) => {
-            console.log(element)
+        onClick: async (event, element) => {
             let overrideKey = element.dataset['overrideKey'];
             let overrideName = element.dataset['overrideName'];
             let context = element.dataset['context'];
@@ -1768,9 +1810,9 @@ export function numericOverrideOptions(actor) {
     })
 
     options.push({
-        name: `Remove Override`,
+        label: `Remove Override`,
         icon: '<i class="fas fa-delete">',
-        callback: element => {
+        onClick: (event, element) => {
 
             const overrideKey = element.dataset['overrideKey'];
             const context = element.dataset['context'];
@@ -1786,7 +1828,8 @@ export function numericOverrideOptions(actor) {
 
             actor.safeUpdate(data);
         },
-        condition: element => {
+        // v14: `visible` replaces `condition`, and it receives the HTMLElement target.
+        visible: element => {
             let override = element.dataset["override"]
             return !!override
         }

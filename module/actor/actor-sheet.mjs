@@ -26,9 +26,33 @@ import {buildRollContent} from "../common/chatMessageHelpers.mjs";
 
 // noinspection JSClosureCompilerSyntax
 
-function getRollFromDataSet(dataset) {
-    if (dataset.roll) {
-        return dataset.roll;
+/**
+ * Whether every comma separated segment of a formula is something Roll can parse.
+ *
+ * Handlebars templates build roll formulas by interpolation ("1d20 + {{value}}"), so a value that
+ * does not exist leaves a truthy but unparseable fragment like "1d20 + " behind.  `new Roll()` on
+ * such a fragment throws a PEG SyntaxError out of a click handler, which surfaces as a dead button
+ * rather than as an error the user can act on.
+ *
+ * @param {string} formula
+ * @returns {boolean}
+ */
+export function isRollableFormula(formula) {
+    if (typeof formula !== "string") return false;
+    const segments = formula.split(",").map(segment => segment.trim());
+    if (!segments.length || segments.some(segment => !segment)) return false;
+    return segments.every(segment => Roll.validate(segment));
+}
+
+export function getRollFromDataSet(dataset) {
+    // data-roll wins when it is a usable formula.  When it is an interpolation leftover, fall
+    // through to the resolved variable, which is built in code and therefore always complete.
+    const rolled = typeof dataset.roll === "string" ? dataset.roll.trim() : dataset.roll;
+    if (rolled && isRollableFormula(rolled)) {
+        return rolled;
+    }
+    if (rolled) {
+        console.warn(`SWSE | ignoring incomplete roll formula "${rolled}"`, dataset);
     }
     if (dataset.key) {
         return this.object.resolvedVariables.get(dataset.key)
@@ -347,6 +371,13 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 
         let formula = getRollFromDataSet.call(this,{key: "@UseTheForce"})
 
+        // An actor without the Use the Force skill has no resolved variable, and building a Roll
+        // out of "undefined" throws out of this click handler.
+        if (!formula) {
+            ui.notifications.warn(`${this.object.name} has no Use the Force roll to block or deflect with.`);
+            return;
+        }
+
         if(deflectCount > 0){
             formula = `${formula} - ${deflectCount * 5}`;
         }
@@ -402,6 +433,14 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
             system: system
         })
 
+        // v14 does not throw on a rejected create: the validation error is routed through
+        // Hooks.onError and Document.create resolves to undefined.  Say so instead of failing with
+        // a TypeError two lines further down.
+        if (!follower) {
+            ui.notifications.error(`SWSE could not create a follower for ${this.object.name}. See the console for the validation error.`);
+            return;
+        }
+
         const provided = getInheritableAttribute({entity: this.object, attributeKey: "followerProvides"})
 
         provided.push(...getInheritableAttribute({entity: sourceItem, attributeKey: "followerCreationProvides"}))
@@ -412,10 +451,14 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
             returnAdded: true, items: [
                 {name: "Follower", type: "trait", system: {changes: [{key: "follower", value: true}]}}
             ]
-        }))[0];
+        }) ?? [])[0];
 
         await this.object.addActorLink(follower, "follower", itemId, {skipReciprocal: true});
-        await follower.addActorLink(this.object, "leader", followerTrait.id, {skipReciprocal: true});
+        if (followerTrait) {
+            await follower.addActorLink(this.object, "leader", followerTrait.id, {skipReciprocal: true});
+        } else {
+            console.warn(`SWSE | the Follower trait could not be added to ${follower.name}; the reciprocal leader link is missing`);
+        }
 
         follower.sheet.render(!event.skipRender)
 
@@ -493,12 +536,15 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 
 
     _onCreateNewItem(event) {
-        let itemType = $(event.currentTarget).data("action-type")
+        let itemType = event.currentTarget.dataset.actionType
 
+        // `data` was renamed to `system` in v10 and the compatibility shim is gone in v14, so the
+        // type defaults (the attribute block a new language needs) were being dropped by
+        // SchemaField#clean without a word.
         this.actor.createEmbeddedDocuments('Item', [{
             name: `New ${itemType}`,
             type: itemType,
-            data: getDefaultDataByType(itemType)
+            system: getDefaultDataByType(itemType)
         }]);
     }
 
@@ -507,16 +553,18 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
             return;
         }
         event.stopPropagation();
-        let element = $(event.currentTarget);
-        let itemType = element.data("action-type");
-        const defaultDataByType = getDefaultDataByType(itemType);
+        const element = event.currentTarget;
+        let itemType = element.dataset.actionType;
 
+        // `system`, not `data` (see _onCreateNewItem), and a fresh defaults object per item:
+        // document construction cleans the data in place, so sharing one object across every name
+        // in the CSV list would let the first item's cleaning leak into the rest.
         this.actor.createEmbeddedDocuments('Item',
-            getCleanListFromCSV(element[0].value).map(name => {
+            getCleanListFromCSV(element.value).map(name => {
                 return {
                     name: name,
                     type: itemType,
-                    data: defaultDataByType
+                    system: getDefaultDataByType(itemType)
                 }
             }));
     }
@@ -1159,8 +1207,16 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         const header = event.currentTarget;
         // Get the type of item to create.
         const type = header.dataset.type;
+        if (!type) {
+            console.warn("SWSEActorSheet._onItemCreate: the clicked control carries no data-type", header.dataset);
+            return;
+        }
         // Grab any data associated with this control.
         const data = foundry.utils.duplicate(header.dataset);
+        // The type lives in itemData.type, not in the system data.  This used to read
+        // `delete itemData.data["type"]`, a leftover from before the data -> system rename, which
+        // threw a TypeError on undefined instead of deleting anything.
+        delete data.type;
         // Initialize a default name.
         const name = `New ${type.capitalize()}`;
         // Prepare the item object.
@@ -1169,8 +1225,6 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
             type: type,
             system: data
         };
-        // Remove the type from the dataset since it's in the itemData.type prop.
-        delete itemData.data["type"];
 
         // Finally, create the item!
         return this.actor.createEmbeddedDocuments('Item', [itemData]);
@@ -1194,9 +1248,16 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         const changeKey = dataset.itemAttribute;
         const name = dataset.name;
         const variable = dataset.key || dataset.variable
-        const rawFormula = getRollFromDataSet.call(this, dataset);
+        // Resolved variables may be plain numbers (@STRMOD, @STRSCORE), so normalise to a string
+        // before splitting.
+        const resolved = getRollFromDataSet.call(this, dataset);
+        const rawFormula = resolved === undefined || resolved === null ? "" : String(resolved).trim();
 
         if (!rawFormula) return;
+        if (!isRollableFormula(rawFormula)) {
+            console.warn(`SWSE | "${rawFormula}" is not a rollable formula, ignoring click`, dataset);
+            return;
+        }
         let label = getLabelFromDataSet.call(this, dataset);
         let notes = getNotesFromDataSet.call(this, dataset);
 
@@ -1206,7 +1267,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 
         const exceptionalSkill = exceptionalSkills.includes(label)
 
-        for (let formula of rawFormula.split(",")) {
+        for (let formula of rawFormula.split(",").map(segment => segment.trim())) {
 
             if (!!variable && variable.startsWith('@initiative') && game.combat) {
                 await this.object.rollInitiative({
@@ -1708,14 +1769,34 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         return false;
     }
 
-    async _onMakeAttack(ev, type = Attack.TYPES.SINGLE_ATTACK){
-        if(ev.currentTarget.dataset.attackKeys){
-            let keys = ev.currentTarget.dataset.attackKeys.split(",").map(k => k.trim())
-            await makeAttack({actorUUID: this.object.uuid, type: Attack.TYPES.FULL_ATTACK, attackKeys:[keys]});
-        } else {
-            await makeAttack({actorUUID: this.object.uuid, type: type, attackKeys:[ev.currentTarget.dataset.attackKey]});
-        }
+    /**
+     * The attack payload (`data-attack-key` / `data-attack-keys` / `data-action`) lives on the
+     * wrapping `div.attack-button`, because that wrapper is also the ContextMenu selector (see
+     * issues #552 and #554).  The click listener however is bound to the inner `button.attack`,
+     * whose own dataset is empty, so read the payload from the nearest ancestor that carries it.
+     * Moving the attributes onto the button instead would fix the click and break the context menu.
+     *
+     * @param {HTMLElement} element the element the event was dispatched on
+     * @returns {DOMStringMap} the dataset that holds the attack payload
+     */
+    _attackDataset(element) {
+        const source = element?.closest?.("[data-attack-keys], [data-attack-key]") ?? element;
+        return source?.dataset ?? {};
+    }
 
+    async _onMakeAttack(ev, type = Attack.TYPES.SINGLE_ATTACK){
+        const dataset = this._attackDataset(ev.currentTarget);
+        if (dataset.attackKeys) {
+            // `attackKeys` is already the list; wrapping it in another array made
+            // `getAttacks` (attackDelegate.mjs) compare an Array against attack keys and match nothing.
+            const keys = dataset.attackKeys.split(",").map(k => k.trim()).filter(k => !!k)
+            await makeAttack({actorUUID: this.object.uuid, type: Attack.TYPES.FULL_ATTACK, attackKeys: keys});
+        } else if (dataset.attackKey) {
+            await makeAttack({actorUUID: this.object.uuid, type: type, attackKeys: [dataset.attackKey]});
+        } else {
+            // No key on the element (e.g. the "Full Attack" button): let the user pick the attacks.
+            await makeAttack({actorUUID: this.object.uuid, type: type, attackKeys: []});
+        }
     }
 
     _onActivateItem(ev) {
