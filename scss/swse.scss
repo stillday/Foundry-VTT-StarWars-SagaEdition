@@ -29,3 +29,6 @@
 }
 @import 'components/chat';
 @import 'components/compendium';
+
+/* Undo v14 core CSS regressions.  Must come last and must stay outside `.swse { }`. */
+@import 'components/v14-overrides';

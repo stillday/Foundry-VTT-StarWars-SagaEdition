@@ -1,0 +1,80 @@
+/* --------------------------------------------------------------------------------------------- */
+/*  Foundry v14 core CSS regressions                                                              */
+/*                                                                                                */
+/*  Everything in this file exists only to undo a rule the v14 core stylesheet introduced.  The    */
+/*  core rules all live inside `@layer` blocks (foundry2.css declares reset, variables, elements,  */
+/*  blocks, applications, compatibility, layouts, system, modules, exceptions), and unlayered CSS  */
+/*  always beats layered CSS regardless of specificity - which is why these plain selectors are    */
+/*  enough and no `!important` is needed.                                                          */
+/*                                                                                                */
+/*  This partial is imported outside the `.swse { }` block in swse.scss, so every selector states  */
+/*  its own scope.                                                                                 */
+/* --------------------------------------------------------------------------------------------- */
+
+/*  The skill tables rotate their header cells by -25deg (see components/_resource.scss).  v14's
+    `@layer elements.typography` added `table { overflow: hidden }` (foundry2.css:3496), which clips
+    the rotated headers off: on the vehicle sheet the table measured scrollHeight 88 against
+    clientHeight 36.  v13 had no such rule. */
+.swse table.skill,
+.swse table.skill thead,
+.swse table.skill thead tr,
+.swse table.skill thead tr th {
+  overflow: visible;
+}
+
+/*  `.sheet-body { height: 100% }` (components/_forms.scss) is 100% of a box that also contains the
+    tab strip.  The strip is 40px tall (components/_tabs.scss) and v14 core adds
+    `.tabs.sheet-tabs { margin: 4px 0 }` (foundry2.css:13314), so the body overshoots its container
+    by 48px and forces a scrollbar that has nothing to scroll to.  Let the container distribute the
+    space instead of hard-coding a percentage. */
+.swse :is(form, div):has(> nav.sheet-tabs) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.swse nav.sheet-tabs {
+  flex: 0 0 auto;
+}
+
+.swse nav.sheet-tabs + .sheet-body {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+/*  v14 core sets `body.game .app a[href] { color: var(--color-text-hyperlink) }` inside
+    `@layer compatibility` (foundry2.css:12361), and `--color-text-hyperlink` is #ff6400 (line 69).
+    v13 did not colour sheet links, so every `<a href>` on an SWSE sheet - the skill name links in
+    particular - turned orange on backgrounds it cannot be read against.  Override the variable the
+    core rule reads rather than fighting the rule, so links stay links and simply get a readable
+    colour. */
+.swse {
+  --color-text-hyperlink: #123c5a;
+}
+
+/*  Even the darkened link colour cannot reach the WCAG 4.5:1 minimum against a solid `darkcyan`
+    row (2.92:1), so the highlight becomes a tint of the same hue instead of a full fill.  The row
+    is still clearly marked and both the text and the links are readable on it. */
+.swse .highlighted-skill {
+  background-color: rgba(0, 139, 139, 0.22);
+}
+
+/*  `{{editor ... button=true}}` renders an icon-only `<a class="editor-edit">` and nothing else, so
+    the Notes / Edit tabs look completely empty until the user happens to hover the bare pencil.
+    Give it a label and a button outline.  (The editor itself works: clicking the pencil activates
+    ProseMirror through FormApplicationV1#_activateEditor.) */
+.swse .editor > a.editor-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 2px 10px;
+  border: 1px solid var(--color-border-dark, #7a7971);
+  border-radius: 4px;
+}
+
+.swse .editor > a.editor-edit::after {
+  content: "Edit";
+  font-weight: bold;
+}

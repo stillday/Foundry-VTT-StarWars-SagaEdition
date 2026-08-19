@@ -138,14 +138,28 @@ export async function resolveEntity(item) {
             itemName = item.name;
         } else {
 
+            // v14 does not throw on a rejected create: ClientDatabaseBackend catches the
+            // DataModelValidationError, routes it through Hooks.onError and skips the document, so
+            // Document.create resolves to undefined.  Dereferencing that produced a bare TypeError
+            // instead of telling anyone what failed.
             entity = await SWSEItem.create(item, {render: false});
+            if (!entity) {
+                ui.notifications.error(`SWSE could not create the item "${item.name ?? "(unnamed)"}" of type "${item.type ?? "(no type)"}". Its data was rejected as invalid; see the console for the validation error.`);
+                return {payload: undefined, itemName: item.name, entity: null, createdItem: false};
+            }
             itemName = entity.name;
         }
     } else if (item.duplicate) {
         entity = item.item.clone();
         itemName = entity.name;
     } else if (item.uuid) {
+        // fromDropData resolves to undefined for a uuid that no longer exists (deleted world item,
+        // disabled module compendium).
         entity = await Item.implementation.fromDropData(item);
+        if (!entity) {
+            ui.notifications.error(`SWSE could not resolve the item at "${item.uuid}". It may have been deleted or live in a compendium that is not available.`);
+            return {payload: undefined, itemName: item.name, entity: null, createdItem: false};
+        }
         itemName = entity.name;
     } else if(item.name) {
         let indices = await getIndexAndPack(item);
@@ -169,8 +183,14 @@ export async function resolveEntity(item) {
     if (!entity && item.type === "language") {
         entity = game.items.find(i => i.name === item.name)
         if (!entity) {
-            let entities = await SWSEItem.create([item]);
+            // createDocuments returns the documents it managed to create - an empty array when the
+            // data was rejected - so `entities[0]` can legitimately be undefined.
+            let entities = await SWSEItem.create([item]) ?? [];
             entity = entities[0];
+            if (!entity) {
+                ui.notifications.error(`SWSE could not create the language "${item.name ?? "(unnamed)"}". Its data was rejected as invalid; see the console for the validation error.`);
+                return {payload, itemName: itemName || item.name, entity: null, createdItem: false};
+            }
             createdItem = true;
         }
     }

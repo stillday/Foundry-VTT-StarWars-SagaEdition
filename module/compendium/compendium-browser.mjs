@@ -72,11 +72,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
          * @property
          */
         this.filterQuery = /.*/;
-        let split = args[0].filterString?.split(" ") || [];
-        if (args[0].pack) {
-            split.push(("-pack:" + args[0].pack).replace(/ /g, "_"));
-        }
-        this.defaultString = split.join(" ")
+        this.defaultString = SWSECompendiumBrowser.buildFilterString(args[0]);
         this.selectedEntityType = args[0].type || "Item"
 
         this.do_filter(this.defaultString);
@@ -87,6 +83,43 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         {
             this._savedItems = [];
         }
+    }
+
+    /**
+     * Turn the `{filterString, pack}` a sheet control carries into the search box's filter string.
+     * @param {{filterString?: string, pack?: string}} [request]
+     * @returns {string}
+     */
+    static buildFilterString(request = {}) {
+        const split = request.filterString?.split(" ") ?? [];
+        if (request.pack) {
+            split.push(("-pack:" + request.pack).replace(/ /g, "_"));
+        }
+        return split.join(" ");
+    }
+
+    /**
+     * Point an already open browser at a different filter.
+     *
+     * Loading the browser's data means indexing every compendium of the selected document type - 24
+     * Item packs with 4939 items in this system.  That work is filter independent: `this.items` holds
+     * everything and `postFilters` narrows it down, which is exactly what typing in the search box
+     * already does.  So a request for a different filter can be served by re-filtering instead of by
+     * building a second browser from scratch.
+     *
+     * @param {{filterString?: string, pack?: string, actionModifier?: string}} request
+     */
+    applyFilterRequest(request = {}) {
+        this.defaultString = SWSECompendiumBrowser.buildFilterString(request);
+        if (request.actionModifier !== undefined) {
+            this.options.actionModifier = request.actionModifier;
+        }
+        const search = this.element?.find?.('input[name="search"]');
+        if (search?.length) search.val(this.defaultString);
+        this.do_filter(this.defaultString);
+        // An instance that is still inside `getData()` has no element yet, and `bringToTop()` reads
+        // `this.element[0]` unguarded.  Only raise a window that is actually on screen.
+        if (this.element?.[0]) this.bringToTop?.();
     }
 
     static get defaultOptions() {
@@ -223,7 +256,14 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     }
 
     _contextMenu(html) {
-        foundry.applications.ux.ContextMenu.implementation.create(this, html, ".directory-item", this._getEntryContextOptions());
+        // v14 ContextMenu: the container must be an HTMLElement (jQuery is deprecated since v13 and
+        // removed in v15) and `jQuery: false` opts the entry callbacks into HTMLElement targets.
+        // See client/applications/ux/context-menu.mjs.  Both are logged as separate compatibility
+        // warnings when omitted, so both have to be supplied.
+        const container = html instanceof HTMLElement ? html : html?.[0];
+        if (!container) return;
+        foundry.applications.ux.ContextMenu.implementation.create(this, container, ".directory-item",
+            this._getEntryContextOptions(), {jQuery: false});
     }
 
     /* -------------------------------------------- */
@@ -234,26 +274,29 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
      * @private
      */
     _getEntryContextOptions() {
+        // v14 renamed the ContextMenuEntry fields: name -> label, condition -> visible,
+        // callback(target, event) -> onClick(event, target).  With `jQuery: false` set in
+        // _contextMenu the target is an HTMLElement, so read the entry id from its dataset.
         return [
             {
-                name: "COMPENDIUM.ImportEntry",
+                label: "COMPENDIUM.ImportEntry",
                 icon: '<i class="fas fa-download"></i>',
-                condition: () => {
+                visible: () => {
                     let collection = this.getCollection();
                     return false && !!collection && collection.documentClass.canUserCreate(game.user)
                 },
-                callback: li => {
+                onClick: (event, target) => {
                     let collection = this.getCollection();
-                    const id = li.data("entry-id");
+                    const id = target.dataset.entryId;
                     return collection.importFromCompendium(collection, id, {}, {renderSheet: true});
                 }
             },
             {
-                name: "COMPENDIUM.DeleteEntry",
+                label: "COMPENDIUM.DeleteEntry",
                 icon: '<i class="fas fa-trash"></i>',
-                condition: () => game.user.isGM && !!this.getCollection(),
-                callback: async li => {
-                    const id = li.data("entry-id");
+                visible: () => game.user.isGM && !!this.getCollection(),
+                onClick: async (event, target) => {
+                    const id = target.dataset.entryId;
                     const document = await this.getCollection().getDocument(id);
                     return Dialog.confirm({
                         title: `${game.i18n.localize("COMPENDIUM.DeleteEntry")} ${document.name}`,
@@ -299,12 +342,11 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
             await this._fetchMetadata();
         }
 
+        // No `collection` map here any more.  It was an id -> entry index of every loaded item that
+        // no template and no code path ever read, and `getData` runs `duplicate()` over this object
+        // on every render, so it deep cloned all 4939 entries for nothing.
         this._data.data = {
             filters: this.filters,
-            collection: this.items.reduce((cur, o) => {
-                cur[o.item._id] = o;
-                return cur;
-            }, {}),
             labels: {
                 itemCount: this.items.length///game.i18n.localize("PF1.TotalItems").format(this.items.length),
             },
@@ -362,19 +404,54 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
      */
     #progressBar;
 
+    /**
+     * The `system.*` paths the browser needs on top of what core already indexes.
+     *
+     * `Item.metadata.compendiumIndexFields` (common/documents/item.mjs) is
+     * `["_id", "name", "img", "type", "sort", "folder"]`, and
+     * `CompendiumCollection#getIndex` additionally stamps `uuid` onto every entry
+     * (client/documents/collections/compendium-collection.mjs).  Together with the four fields below
+     * that is everything `_mapEntry`, the entry template and every filter this browser offers can
+     * read - see the field-by-field note on `_mapEntry`.
+     *
+     * `CompendiumCollection#indexFields` in v14 is *only* built from
+     * `documentClass.metadata.compendiumIndexFields` plus `CONFIG[documentName].compendiumIndexFields`.
+     * There is no manifest-level `indexFields` and no `flags.<systemId>.indexFields` in v14 - a grep
+     * over `common/packages/` finds no such field.  Declaring them here and passing them to
+     * `getIndex({fields})` per call keeps the extra payload to the browser instead of inflating the
+     * index of every Item pack for the whole client, and `getIndex` caches the widened index on the
+     * pack anyway, so the second browser gets it for free.
+     *
+     * The server honours dotted paths: `ServerBackend##o` turns each entry into a projection with
+     * `setProperty(projection, field, 1)` and hands it to `SublevelDatabase#find({project})`, which
+     * runs `filterObject(record, projection)` - a recursive filter that copies a matched non-object
+     * value (an array of changes included) verbatim.
+     *
+     * @type {string[]}
+     */
+    static INDEX_FIELDS = ["system.subtype", "system.talentTree", "system.possibleProviders", "system.changes"];
+
     async loadCompendium(p, filters = [null]) {
         const progress = this._data.progress;
 
-        // Flush full compendium contents from memory
+        // The index instead of the documents.  `getDocuments()` pulls every field of all 4939 items
+        // of the 24 Item packs over the socket and instantiates a Document (and its DataModel) for
+        // each one; the browser only ever displays name/img/type/subType/talentTree and filters on
+        // those plus `system.changes`.  `getIndex` asks the server to project exactly those fields.
+        //
+        // `p.clear()` is gone with it: it used to drop the pack's document cache on every open, so
+        // every open paid the full price again.  The index is cached on the pack by `getIndex`, and
+        // a widened index is reused as long as the requested fields are a subset of what was already
+        // indexed, which makes reopening the browser nearly free.
+        //
+        // `filters` is unused now - the index is unfiltered by construction and `getBasicFilters()`
+        // returns `[null]` for every browser in this system, so nothing narrowed the query anyway.
+        const index = await p.getIndex({fields: SWSECompendiumBrowser.INDEX_FIELDS});
 
-        let items = [];
-        p.clear();
-        for (let filter of filters) {
-            let values = await p.getDocuments(filter)
-            for (let i of values) {
-                this.packs[p.collection] = p;
-                items.push(this._mapEntry(p, i));
-            }
+        const items = [];
+        for (const entry of index) {
+            this.packs[p.collection] = p;
+            items.push(this._mapEntry(p, entry));
         }
 
         this._onProgress(progress);
@@ -412,7 +489,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
             promises.push(this.loadCompendium(p, this.getBasicFilters()));
         }
 
-        Promise.all(promises).then(response => {
+        // Deliberately not awaited: _gatherData/getData must resolve so the window appears while the
+        // packs are still loading, otherwise the user stares at nothing for the whole load.
+        Promise.all(promises).then(async response => {
             response.forEach(items => this.items.push(...items))
             // Sort items
             this.items = naturalSort(this.items, "item.name");
@@ -420,7 +499,11 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
             // Gather filter data
             this._fetchGeneralFilters();
             // Lazy load
-            this._initLazyLoad();
+            await this._initLazyLoad();
+            // The header counters are rendered from _gatherData, which resolves before this promise
+            // does, so at render time both were still 0.  Fill them in once the items are actually
+            // there instead of leaving the window claiming "0 of 0".
+            this._updateItemCounts();
         })
     }
 
@@ -428,6 +511,28 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     /*  Mapping Functions                    */
 
     /* ------------------------------------- */
+    /**
+     * Reduce one compendium index entry to what the browser actually uses.
+     *
+     * Every field below is consumed somewhere concrete:
+     *  - `_id`, `uuid`, `collection._id`, `img`, `name`, `type`, `subType`, `talentTree` and
+     *    `compendiumModifier` are read by templates/compendium/compendium-browser_entry.hbs,
+     *  - `name`, `type`, `subType`, `talentTree` and `groupTypes` are what the search box matches in
+     *    `_passesFilters`,
+     *  - `type`, `subType`, `pack` and `isExotic` back the `-type:` / `-subtype:` / `-pack:` /
+     *    `-exotic` filter terms produced by `generateFilter`,
+     *  - `changes` is the only thing the homebrew post filter needs.  It hands this very object to
+     *    `getInheritableAttribute({entity})`, whose only reader for a plain object is
+     *    `getLocalChangesOnDocument`, which resolves `document.changes || document.system?.changes`.
+     *    The other collectors bail out immediately: `getChangesFromEmbeddedItems` requires an
+     *    `SWSEActor`, `getChangesFromActiveEffects` requires `document.effects` (which the old
+     *    mapping did not carry either, so nothing regresses) and `getChangesFromLoadedAmmunition`
+     *    requires `document.ammunition`.
+     *
+     * The whole `system` object used to be kept here.  Nothing read it, and it was the reason
+     * `getData`'s `duplicate(this._data.data)` had to deep clone 4939 full item bodies on every
+     * render.
+     */
     _mapEntry(pack, item) {
         const result = {
             collection: {
@@ -439,8 +544,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                 name: item.name,
                 type: item.type,
                 img: item.img,
-                system: item.system,
-                uuid: `Compendium.${pack.metadata.id}.${item._id}`,
+                changes: item.system?.changes,
+                uuid: item.uuid ?? `Compendium.${pack.metadata.id}.${item._id}`,
                 pack: pack.collection,
                 talentTree: item.system?.talentTree,
                 groupTypes: item.system?.possibleProviders || [],
@@ -719,6 +824,18 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         this.element
             .find('span[data-type="filterItemCount"]')
             .text(itemCount)//game.i18n.localize("PF1.FilteredItems").format(itemCount));
+    }
+
+    /**
+     * Refresh both header counters ("<filtered> of <total>").
+     * The total is rendered from `_gatherData`, which runs before the packs have finished loading,
+     * so the window opens claiming "0 of 0" until this is called again afterwards.
+     */
+    _updateItemCounts() {
+        this._determineFilteredItemCount();
+        this.element
+            .find('span[data-type="itemCount"]')
+            .text(this.items.length);
     }
 
     _passesFilters(item) {
