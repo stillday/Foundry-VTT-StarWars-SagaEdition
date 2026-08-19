@@ -37,6 +37,19 @@ function filterEquippedItemsByCriteria(target, resolvedItems, req) {
     return filteredEquippedItems;
 }
 
+/**
+ * The current Dark Side Score of a target.  The schema exposes `system.darkside.value` (the stored
+ * score) and the derived `system.darkside.finalScore` (score + darksideTaint); prefer the derived
+ * value when it has been prepared.  Note there is a second, unused `system.darkSide.value` schema
+ * declaration in module/actor/data/templates/traits.mjs which nothing writes to.
+ * @param {SWSEActor|Object} target
+ * @returns {number}
+ */
+function darkSideScore(target) {
+    const darkside = target?.system?.darkside;
+    return darkside?.finalScore ?? darkside?.value ?? 0;
+}
+
 function meetsPrerequisite(prereq, target, options) {
     const fn = () => {
         let failureList = [];
@@ -76,7 +89,10 @@ function meetsPrerequisite(prereq, target, options) {
                 failureList.push({fail: true, message: `${prereq.text}`});
                 break;
             case 'DARK SIDE SCORE':
-                if (!(target.system.darkside.score < resolveValueArray([prereq.requirement], target))) {
+                // `system.darkside` (abilities.mjs / commondata.mjs) holds `value` plus the derived
+                // `finalScore` (= value + darksideTaint).  There is no `score`, so this read `undefined`
+                // and `!(undefined < n)` made every DARK SIDE SCORE prerequisite pass.
+                if (!(darkSideScore(target) < resolveValueArray([prereq.requirement], target))) {
                     successList.push({prereq, count: 1});
                     break;
                 }
@@ -361,11 +377,18 @@ function meetsPrerequisite(prereq, target, options) {
                     let toks = prereq.requirement.split(" ");
                     let actorAttribute = SWSEActor.getActorAttribute(target, toks[0], options);
                     let number = parseInt(toks[1]);
-                    if (!(actorAttribute < number)) {
+                    // An unresolvable attribute or requirement must not silently satisfy the
+                    // prerequisite: `!(undefined < 13)` is true, which is exactly how this used to
+                    // pass for every character.
+                    if (Number.isFinite(actorAttribute) && Number.isFinite(number) && !(actorAttribute < number)) {
                         successList.push({prereq, count: 1});
                         break;
                     }
                 }
+                // Reaching here means no comparison above succeeded.  This case used to `break`
+                // without recording a failure, so `doesFail` stayed false and ATTRIBUTE
+                // prerequisites were unenforceable even once the attribute lookup worked.
+                failureList.push({fail: true, message: `${prereq.text ?? `${prereq.type}: ${prereq.requirement}`}`});
                 break;
             case 'NOT': {
                 let meetsChildPrereqs = meetsPrerequisites(target, prereq.child, options);
@@ -568,11 +591,17 @@ function meetsPrerequisite(prereq, target, options) {
 export function meetsPrerequisites(target, prereqs, options = {}) {
     //TODO add links to failures to open up the fancy compendium to show the missing thing.  when you make a fancy compendium
 
-    if (!prereqs || (target.system.ignorePrerequisites && options.isLoad)|| (target.system.ignorePrerequisitesOnDrop && options.isAdd) || options.skipPrerequisite || options.isUpload) {
-        return {doesFail: false, failureList: [], successList: []};
-    }
     if (!target) {
         return {doesFail: true, failureList: [], successList: []};
+    }
+    // These two flags live under `system.settings` (module/actor/data/commondata.mjs, written by the
+    // Settings tab via `system.settings.ignorePrerequisites`).  Reading them straight off `system`
+    // always yielded undefined, so both switches were inert.  The legacy top-level location is still
+    // honoured for worlds that stored it there before the DataModel migration.
+    const ignoreAll = target.system?.settings?.ignorePrerequisites ?? target.system?.ignorePrerequisites;
+    const ignoreOnDrop = target.system?.settings?.ignorePrerequisitesOnDrop ?? target.system?.ignorePrerequisitesOnDrop;
+    if (!prereqs || (ignoreAll && options.isLoad) || (ignoreOnDrop && options.isAdd) || options.skipPrerequisite || options.isUpload) {
+        return {doesFail: false, failureList: [], successList: []};
     }
 
     if (!options.prerequisiteCache) {
