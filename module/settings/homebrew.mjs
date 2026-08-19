@@ -80,16 +80,17 @@ export function darthauthorHomebrewOptions() {
 
 export function commonHomebrewOptions() {
     game.settings.register("swse", "homebrewAdjustPointBuy", {
-        name: "Adjust Point Buy",
-        hint: "Adjust Point Buy",
+        name: "Point Buy: total points",
+        hint: "Total points available in the Assign Ability Points dialog. Rules default is 25. "
+            + "Raising this above 96 has no effect, because the cost table caps each ability at 18 (16 points).",
         scope: "world",
         config: true,
         default: 25,
         type: Number,
     })
     game.settings.register("swse", "homebrewAdjustPointBuyDroid", {
-        name: "Adjust Droid Point Buy",
-        hint: "Adjust Droid Point Buy",
+        name: "Point Buy: total points for droids",
+        hint: "Droids have one fewer ability score, so they are expected to receive a lower budget. Rules default is 21.",
         scope: "world",
         config: true,
         default: 21,
