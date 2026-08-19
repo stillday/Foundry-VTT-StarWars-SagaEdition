@@ -1,7 +1,8 @@
-import {inheritableItems, reduceArray, toNumber} from "./common/util.mjs";
+import {inheritableItems, reduceArray, toNumber, toStringValue} from "./common/util.mjs";
 import {SWSEItem} from "./item/item.mjs";
 import {meetsPrerequisites} from "./prerequisite.mjs";
 import {
+    CHANGE_TYPE_TO_MODE,
     ITEM_ONLY_ATTRIBUTES,
     SCALABLE_CHANGE_KEYS,
     SCALABLE_CHANGES,
@@ -34,6 +35,19 @@ export function appendSourceMeta(attribute, source, sourceString, sourceDescript
     
     // Create a deep copy
     attribute = JSON.parse(JSON.stringify(attribute));
+
+    // Foundry v14 replaced the numeric ActiveEffect change `mode` with a string `type`.  Core only
+    // exposes the old `mode` as a NON-ENUMERABLE deprecated getter (BaseActiveEffect._shimChanges in
+    // common/documents/active-effect.mjs), so the deep copy above drops it and every change coming
+    // off a real ActiveEffect would silently fall back to ADD.  Normalise the string type back into
+    // SWSE's own numeric mode, which is what the resolution pipeline in common/util.mjs consumes.
+    if ((attribute.mode === undefined) && (typeof attribute.type === "string")) {
+        const mode = CHANGE_TYPE_TO_MODE[attribute.type]
+            ?? Number(/^custom\.(-?\d+)$/.exec(attribute.type)?.[1]);
+        if (Number.isInteger(mode)) {
+            attribute.mode = mode;
+        }
+    }
     
     // Add metadata properties if they don't exist
     attribute.source = attribute.source || source;
@@ -74,6 +88,19 @@ function getChangesFromEmbeddedItems(entity, itemFilter, embeddedItemOverride) {
     return changes;
 }
 
+/**
+ * The size index used when nothing on an entity declares a size.
+ * @param {*} entity
+ * @returns {number} index into sizeArray
+ */
+function defaultSizeIndex(entity) {
+    if (entity?.type === "character" || entity?.type === "npc") {
+        const medium = sizeArray.indexOf("Medium");
+        return medium > -1 ? medium : 0;
+    }
+    return 0;
+}
+
 export function getResolvedSize(entity, options = {}) {
     if (entity && entity.document && entity.document instanceof SWSEItem) {
         entity = entity.document.parent;
@@ -98,18 +125,28 @@ export function getResolvedSize(entity, options = {}) {
             flags: flags
         })
 
-        let sizeIndex = 0;
+        let sizeIndex = null;
         let sizeBonus = 0;
         for (const sizeValue of size_values) {
-            if(sizeValue.key === "sizeBonus" || (sizeValue.key === "size" && (sizeValue.value.startsWith("+") || sizeValue.value.startsWith("-")))) {
+            const sizeValueString = toStringValue(sizeValue.value);
+            if(sizeValue.key === "sizeBonus" || (sizeValue.key === "size" && (sizeValueString.startsWith("+") || sizeValueString.startsWith("-")))) {
                 sizeBonus += parseInt(sizeValue.value, 10);
             } else {
                 if(sizeArray.indexOf(sizeValue.value)> -1) {
-                    sizeIndex = Math.max( sizeIndex, sizeArray.indexOf(sizeValue.value));
+                    sizeIndex = Math.max( sizeIndex ?? 0, sizeArray.indexOf(sizeValue.value));
                 } else if (!isNaN(sizeValue.value)){
-                    sizeIndex = Math.max( sizeIndex, parseInt(sizeValue.value));
+                    sizeIndex = Math.max( sizeIndex ?? 0, parseInt(sizeValue.value));
                 }
             }
+        }
+        // Nothing on the entity states a size.  `0` is "Fine", which is what a speciesless
+        // character used to report; a character actor without a species defaults to Medium instead.
+        // Tracked separately from the loop so an explicitly *smaller* size (Small species) is not
+        // raised to Medium by the Math.max above.
+        // ASSUMPTION: Medium is the neutral default for character/npc actors (every playable
+        // species in SWSE is Small or Medium); everything else keeps the previous default.
+        if (sizeIndex === null) {
+            sizeIndex = defaultSizeIndex(entity);
         }
         let miscBonus = 0;
         if("damageThresholdSizeModifier" === options.attributeKey){

@@ -1,6 +1,8 @@
-export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredTemplate ?? MeasuredTemplate) {
+export default class SWSETemplate extends foundry.canvas.placeables.MeasuredTemplate {
     #initialLayer;
     #events;
+    /** Guards against a second confirm/cancel after the placement promise has already settled. */
+    #finished = false;
     drawPreview() {
         const initialLayer = canvas.activeLayer;
 
@@ -28,6 +30,7 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
                 cancel: this._onCancelPlacement.bind(this),
                 confirm: this._onConfirmPlacement.bind(this),
                 move: this._onMovePlacement.bind(this),
+                keydown: this._onKeyDownPlacement.bind(this),
                 resolve,
                 reject,
                 rotate: this._onRotatePlacement.bind(this)
@@ -38,7 +41,22 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
             canvas.stage.on("mouseup", this.#events.confirm);
             canvas.app.view.oncontextmenu = this.#events.cancel;
             canvas.app.view.onwheel = this.#events.rotate;
+            // Escape is the keyboard escape hatch out of a placement; without it a preview started
+            // without a usable canvas (or by a client that never clicks) blocks the workflow that
+            // awaits this promise forever.
+            document.addEventListener("keydown", this.#events.keydown);
         });
+    }
+
+    /**
+     * Cancel placement when Escape is pressed.
+     * @param {KeyboardEvent} event  Triggering keyboard event.
+     */
+    _onKeyDownPlacement(event) {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        this._onCancelPlacement(event);
     }
 
     static fromAttack(attack, options={}) {
@@ -47,7 +65,7 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
 
         const templateData = foundry.utils.mergeObject({
             t: target.shape,
-            user: game.user.id,
+            author: game.user.id,
             distance: target.size,
             direction: 0,
             x: 0,
@@ -113,6 +131,7 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
      * @param {Event} event  Triggering mouse event.
      */
     async _onConfirmPlacement(event) {
+        if (this.#finished) return;
         await this._finishPlacement(event);
         const destination = canvas.templates.getSnappedPoint({ x: this.document.x, y: this.document.y });
         this.document.updateSource(destination);
@@ -126,8 +145,12 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
      * @param {Event} event  Triggering mouse event.
      */
     async _onCancelPlacement(event) {
+        if (this.#finished) return;
         await this._finishPlacement(event);
-        this.#events.reject();
+        // Resolve with nothing rather than rejecting: a cancelled placement is a normal outcome and
+        // callers treat "no templates" as "no area selected".  Rejecting used to abort the whole
+        // attack workflow with an `undefined` reason.
+        this.#events.resolve([]);
     }
 
     /**
@@ -135,11 +158,13 @@ export default class SWSETemplate extends (foundry.canvas?.placeables?.MeasuredT
      * @param {Event} event  Triggering event that ended the placement.
      */
     async _finishPlacement(event) {
+        this.#finished = true;
         this.layer._onDragLeftCancel(event);
         canvas.stage.off("mousemove", this.#events.move);
         canvas.stage.off("mouseup", this.#events.confirm);
         canvas.app.view.oncontextmenu = null;
         canvas.app.view.onwheel = null;
+        document.removeEventListener("keydown", this.#events.keydown);
         if ( this.#hoveredToken ) {
             this.#hoveredToken._onHoverOut(event);
             this.#hoveredToken = null;

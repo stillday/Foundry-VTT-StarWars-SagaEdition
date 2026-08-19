@@ -1,6 +1,6 @@
 import {SWSECompendiumBrowser} from "./compendium-browser.mjs";
 
-export class SWSECompendiumDirectory extends (foundry.applications.sidebar.tabs.CompendiumDirectory ?? CompendiumDirectory)
+export class SWSECompendiumDirectory extends foundry.applications.sidebar.tabs.CompendiumDirectory
 {
     // static get defaultOptions() {
     //     return mergeObject(super.defaultOptions, {
@@ -20,7 +20,7 @@ export class SWSECompendiumDirectory extends (foundry.applications.sidebar.tabs.
     }
     //
     _contextMenu(html) {
-        ContextMenu.create(this, html, ".compendium-filter", this._getEntryContextOptions());
+        foundry.applications.ux.ContextMenu.implementation.create(this, html, ".compendium-filter", this._getEntryContextOptions());
     }
     //
     static viewCompendiumItemsByFilter(event){

@@ -10,7 +10,7 @@ export const naturalSort = function (arr, propertyKey = "") {
 };
 
 
-export class SWSECompendiumBrowser extends Application {
+export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     constructor(...args) {
         super(...args);
 
@@ -204,7 +204,7 @@ export class SWSECompendiumBrowser extends Application {
     }
 
     async _onDrop(event) {
-        const data = TextEditor.getDragEventData(event);
+        const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
         if (!data.type) throw new Error("You must define the type of document data being dropped");
 
         let collection = this.getCollection();
@@ -223,7 +223,7 @@ export class SWSECompendiumBrowser extends Application {
     }
 
     _contextMenu(html) {
-        ContextMenu.create(this, html, ".directory-item", this._getEntryContextOptions());
+        foundry.applications.ux.ContextMenu.implementation.create(this, html, ".directory-item", this._getEntryContextOptions());
     }
 
     /* -------------------------------------------- */
@@ -347,8 +347,20 @@ export class SWSECompendiumBrowser extends Application {
     _onProgress(progress) {
         progress.loaded++;
         progress.pct = Math.round((progress.loaded * 100) / progress.total);
-        foundry.applications.ui.SceneNavigation.displayProgressBar({label: progress.message, pct: progress.pct});
+        // SceneNavigation.displayProgressBar is deprecated since v13 (removed in v15) in favour of
+        // Notifications#notify with {progress: true}; see client/applications/ui/scene-navigation.mjs.
+        // The notification's own pct is a 0-1 fraction, unlike the old 0-100 percentage.
+        if (!this.#progressBar || !ui.notifications.has(this.#progressBar)) {
+            this.#progressBar = ui.notifications.info(progress.message, {progress: true});
+        }
+        this.#progressBar.update({message: progress.message, pct: Math.clamp(progress.pct, 0, 100) / 100});
     }
+
+    /**
+     * The active progress notification used while compendium contents are loaded.
+     * @type {Notification|undefined}
+     */
+    #progressBar;
 
     async loadCompendium(p, filters = [null]) {
         const progress = this._data.progress;
@@ -672,7 +684,7 @@ export class SWSECompendiumBrowser extends Application {
         // Save filter settings
         {
             const settings = game.settings.get("pf1", "compendiumFilters");
-            setProperty(settings, `${this.type}.activeFilters`, this.activeFilters);
+            foundry.utils.setProperty(settings, `${this.type}.activeFilters`, this.activeFilters);
             game.settings.set("pf1", "compendiumFilters", settings);
         }
 
@@ -759,8 +771,8 @@ export class SWSECompendiumBrowser extends Application {
 
             // Copy specific data properties
             for (let k of propKeys) {
-                if (hasProperty(i.item, k)) {
-                    setProperty(resultObj, `item.${k}`, getProperty(i.item, k));
+                if (foundry.utils.hasProperty(i.item, k)) {
+                    foundry.utils.setProperty(resultObj, `item.${k}`, foundry.utils.getProperty(i.item, k));
                 }
             }
 

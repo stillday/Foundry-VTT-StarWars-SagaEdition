@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import {SWSE} from "./config.mjs";
-import {dieSize_vanilla, dieType} from "./constants.mjs";
+import {CHANGE_MODE_LABELS, CHANGE_MODES, dieSize_vanilla, dieType} from "./constants.mjs";
 import SWSEActor from "../actor/actor.mjs";
 import {SWSEItem} from "../item/item.mjs";
 import {meetsPrerequisites} from "../prerequisite.mjs";
@@ -458,7 +458,7 @@ export function adjustDieSize(roll, dieSizeAdjustment){
 }
 
 export function toBoolean(value) {
-    if (typeof value === "undefined") {
+    if ((typeof value === "undefined") || (value === null)) {
         return false;
     }
     if (value.value) {
@@ -474,6 +474,24 @@ export function toBoolean(value) {
 
     return value.toLowerCase() === "true" || value.toLowerCase() === "t";
 
+}
+
+/**
+ * Coerce a change `value` to a string so that string operations on it are safe.
+ *
+ * Foundry v14 runs `JSON.parse` recursively over every string value while migrating ActiveEffects
+ * (BaseActiveEffect.#migrateChangeValue in common/documents/active-effect.mjs), so values that were
+ * authored as strings ("20", "true") come back off an ActiveEffect as numbers or booleans.  SWSE's
+ * own `system.changes` are untouched and still hold strings, so any code reading both sources has to
+ * tolerate both types.
+ * @param {*} value
+ * @returns {string} The value as a string; "" for null/undefined.
+ */
+export function toStringValue(value) {
+    if ((value === undefined) || (value === null)) {
+        return "";
+    }
+    return `${value}`;
 }
 
 export function toNumber(value) {
@@ -512,7 +530,11 @@ export function resolveAttackRange(effectiveRange, distance, accurate, inaccurat
 
     //TODO add homebrew option for a range multiplier here
 
-    let resolvedRange = Object.entries(range).filter(entry => entry[1].low <= distance && entry[1].high >= distance)[0][0];
+    const band = Object.entries(range).find(entry => entry[1].low <= distance && entry[1].high >= distance);
+    if (!band) {
+        return "out of range";
+    }
+    let resolvedRange = band[0];
 
     if (resolvedRange === 'short' && accurate) {
         return "point-blank";
@@ -688,13 +710,29 @@ export function getTokenDistanceInSquares(source, target) {
 }
 
 const ATTRIBUTE_RESOLUTION_ORDER = [
-    CONST.ACTIVE_EFFECT_MODES.ADD,
-    CONST.ACTIVE_EFFECT_MODES.DOWNGRADE,
-    CONST.ACTIVE_EFFECT_MODES.UPGRADE,
-    CONST.ACTIVE_EFFECT_MODES.MULTIPLY,
-    CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
-    6,
+    CHANGE_MODES.ADD,
+    CHANGE_MODES.DOWNGRADE,
+    CHANGE_MODES.UPGRADE,
+    CHANGE_MODES.MULTIPLY,
+    CHANGE_MODES.OVERRIDE,
+    CHANGE_MODES.POST_ROLL_MULTIPLY,
 ];
+
+/**
+ * Build the option map for the change-mode `<select>` on the item and actor sheets.
+ *
+ * Replaces the former `Object.entries(CONST.ACTIVE_EFFECT_MODES)` construction: that constant is
+ * deprecated in Foundry v14 (removed in v16) and its `EFFECT.MODE_*` localisation keys no longer
+ * exist in core lang.  The option *values* stay numeric because they are written straight back into
+ * `system.changes.<i>.mode`, which is SWSE data (see CHANGE_MODES).
+ * @returns {Record<number, string>} A mapping of numeric change mode to localised label.
+ */
+export function changeModeChoices() {
+    return Object.entries(CHANGE_MODE_LABELS).reduce((obj, [mode, key]) => {
+        obj[mode] = game.i18n.localize(key);
+        return obj;
+    }, {})
+}
 
 const quantityPattern = new RegExp('(.+):(.+)');
 const diePattern = new RegExp('(\\d+)d(\\d+)x?(\\d?)');
@@ -848,7 +886,7 @@ function multiplyValues(currentValue, multiplier) {
         group[i] = group[i] || [];
 
         let sum = group[i][j] || (typeof term.value === "number" ? 0 : "");
-        if(typeof sum === 'string' && sum.length > 0 && term.value.startsWith("@")){
+        if(typeof sum === 'string' && sum.length > 0 && toStringValue(term.value).startsWith("@")){
             sum += " + "
         }
         group[i][j] = sum + term.value;
@@ -932,7 +970,7 @@ export function resolveExpressionReduce(values, actor) {
     for (const value of values) {
         const priority = value.priority || 1;
         resolutionSorting[priority] = resolutionSorting[priority] || {};
-        const mode = value.mode || 2;
+        const mode = value.mode || CHANGE_MODES.ADD;
         resolutionSorting[priority][mode] = resolutionSorting[priority][mode] || [];
         value.value = resolveExpression(value, actor)
         resolutionSorting[priority][mode].push(value)
@@ -945,22 +983,22 @@ export function resolveExpressionReduce(values, actor) {
         for (const mode of ATTRIBUTE_RESOLUTION_ORDER) {
             for (const value of z[mode] || []) {
                 switch (mode) {
-                    case CONST.ACTIVE_EFFECT_MODES.ADD:
+                    case CHANGE_MODES.ADD:
                         currentValue = addValues(currentValue, value.value);
                         break;
-                    case CONST.ACTIVE_EFFECT_MODES.DOWNGRADE:
+                    case CHANGE_MODES.DOWNGRADE:
                         currentValue = downgradeValues(currentValue, value.value);
                         break;
-                    case CONST.ACTIVE_EFFECT_MODES.UPGRADE:
+                    case CHANGE_MODES.UPGRADE:
                         currentValue = upgradeValues(currentValue, value.value);
                         break;
-                    case CONST.ACTIVE_EFFECT_MODES.MULTIPLY:
+                    case CHANGE_MODES.MULTIPLY:
                         currentValue = multiplyValues(currentValue, value.value);
                         break;
-                    case CONST.ACTIVE_EFFECT_MODES.OVERRIDE:
+                    case CHANGE_MODES.OVERRIDE:
                         currentValue = value.value;
                         break;
-                    case 6:
+                    case CHANGE_MODES.POST_ROLL_MULTIPLY:
                         currentValue += " X "+value.value;
                         break;
                 }
@@ -1000,7 +1038,7 @@ function resolveValuesReduce(values, actor) {
         for (const value of values) {
             const priority = value.priority || 1;
             resolutionSorting[priority] = resolutionSorting[priority] || {};
-            const mode = value.mode || 2;
+            const mode = value.mode || CHANGE_MODES.ADD;
             resolutionSorting[priority][mode] = resolutionSorting[priority][mode] || [];
             resolutionSorting[priority][mode].push(value)
         }
@@ -1012,7 +1050,7 @@ function resolveValuesReduce(values, actor) {
             let z = resolutionSorting[priority];
             for (const mode of ATTRIBUTE_RESOLUTION_ORDER) {
                 for (const value of z[mode] || []) {
-                    if(mode === CONST.ACTIVE_EFFECT_MODES.OVERRIDE){
+                    if(mode === CHANGE_MODES.OVERRIDE){
                         if(!lastPriority || lastPriority < priority) {
                             currentValue = [];
                         }
@@ -1075,10 +1113,10 @@ export function reduceArray(reduce, values, actor) {
         case "VALUES":
             return resolveValuesReduce(values, actor);
         case "VALUES_TO_LOWERCASE":
-            return values.map(attr => attr.value.toLowerCase());
+            return values.map(attr => toStringValue(attr.value).toLowerCase());
         case "VALUES_WITH_MODIFIERS":
             return values.map(attr => {
-                const toks = attr.value.split("|")
+                const toks = toStringValue(attr.value).split("|")
                 return {value: toks[0], modifiers: parseModifiers(toks.length > 1 ? toks.slice(1) : []), source: attr.sourceString};
             });
         case "UNIQUE":
@@ -1309,9 +1347,9 @@ export function convertOverrideToMode(changes) {
             let override = change.override;
             delete change.override;
             if (override) {
-                change.mode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
+                change.mode = CHANGE_MODES.OVERRIDE;
             } else {
-                change.mode = CONST.ACTIVE_EFFECT_MODES.ADD;
+                change.mode = CHANGE_MODES.ADD;
             }
         }
         return changes;
@@ -1513,7 +1551,9 @@ export function appendTerm(value, flavor, modifiers = [], evaluated = false) {
     if (`${parseInt(value)}` === `${value}`) {
         return appendNumericTerm(value, flavor, modifiers, evaluated);
     }
-    if(value.split("d").length > 1){
+    // Change values off an ActiveEffect may be numbers or booleans after Foundry v14's JSON.parse
+    // based migration, so coerce before doing string work on them.
+    if(toStringValue(value).split("d").length > 1){
         return appendDieTerm(value, flavor, modifiers, evaluated)
     }
     console.warn(`unknown term ${value}`)
@@ -1525,7 +1565,7 @@ export function appendDieTerm(value, flavor) {
         return [];
     }
 
-    let parts = value.split("d")
+    let parts = toStringValue(value).split("d")
     let number = parseInt(parts[0]);
     let faces = parseInt(parts[1]);
     if (number === 0) {
@@ -1590,7 +1630,7 @@ export function toChat(content, actor = undefined, flavor="", context={}) {
     let speaker = ChatMessage.getSpeaker({actor: actor || this.object.parent});
 
     let messageData = {
-        user: game.user.id,
+        author: game.user.id,
         speaker: speaker,
         flavor: flavor,
         style: getChatType(context),
@@ -1600,7 +1640,11 @@ export function toChat(content, actor = undefined, flavor="", context={}) {
     }
 
     let cls = getDocumentClass("ChatMessage");
-    ChatMessage.applyRollMode(messageData, "roll")
+
+    // v14: ChatMessage.applyRollMode was replaced by applyMode, which resolves the
+    // visibility mode from the "core.messageMode" setting chosen in the chat sidebar.
+    cls.applyMode(messageData);
+
     let msg = new cls(messageData);
 
     return cls.create(msg, {});

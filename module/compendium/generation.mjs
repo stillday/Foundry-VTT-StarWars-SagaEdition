@@ -127,7 +127,7 @@ async function importCompendium(jsonImport, forceRefresh) {
         return;
     }
 
-    let collection = await CompendiumCollection.createCompendium({
+    let collection = await foundry.documents.collections.CompendiumCollection.createCompendium({
         label: compendiumName.toLowerCase(),
         name: compendiumName.toLowerCase(),
         type: entity,

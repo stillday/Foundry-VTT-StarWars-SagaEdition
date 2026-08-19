@@ -1,5 +1,6 @@
 import {
     attackOptions,
+    changeModeChoices,
     filterItemsByTypes,
     getCleanListFromCSV,
     getParentByHTMLClass,
@@ -136,10 +137,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
     /** @override */
     getData(options={}) {
         let data = super.getData(options);
-        data.modes = Object.entries(CONST.ACTIVE_EFFECT_MODES).reduce((obj, e) => {
-            obj[e[1]] = game.i18n.localize("EFFECT.MODE_" + e[0]);
-            return obj;
-        }, {})
+        data.modes = changeModeChoices();
         return data;
     }
 
@@ -1443,7 +1441,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         };
         const template = `systems/swse/templates/dialog/roll-and-standard-array.hbs`;
 
-        let content = await renderTemplate(template, data);
+        let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
             title: "Assign Ability Scores",
@@ -1530,7 +1528,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         };
         const template = `systems/swse/templates/dialog/manual-attributes.hbs`;
 
-        let content = await renderTemplate(template, data);
+        let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
             title: "Assign Ability Score Points",
@@ -1581,7 +1579,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         };
         const template = `systems/swse/templates/dialog/level-attribute-bonus.hbs`;
 
-        let content = await renderTemplate(template, data);
+        let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
             title: "Assign Ability Score Points",
@@ -1639,7 +1637,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         };
         const template = `systems/swse/templates/dialog/point-buy.hbs`;
 
-        let content = await renderTemplate(template, data);
+        let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
             title: "Assign Ability Score Points",

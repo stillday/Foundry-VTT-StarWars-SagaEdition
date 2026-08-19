@@ -1,4 +1,4 @@
-import {appendNumericTerm} from "../common/util.mjs";
+import {appendNumericTerm, toStringValue} from "../common/util.mjs";
 import {SWSEItem} from "../item/item.mjs";
 import {compareSizes} from "./size.mjs";
 import {getInheritableAttribute} from "../attribute-helper.mjs";
@@ -38,7 +38,7 @@ export function getPossibleProficiencies(actor, weapon) {
         entity: actor,
         attributeKey: "weaponFamiliarity"
     }).forEach(fam => {
-        let toks = fam.value.split(":");
+        let toks = toStringValue(fam.value).split(":");
         if (toks.length === 2) {
             weaponFamiliarities[toks[0]] = toks[1];
         }

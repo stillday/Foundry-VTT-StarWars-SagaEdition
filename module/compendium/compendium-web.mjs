@@ -2,7 +2,7 @@ import {getIndexEntriesByTypes} from "./compendium-util.mjs";
 import {meetsPrerequisites} from "../prerequisite.mjs";
 import {SimpleCache} from "../common/simple-cache.mjs";
 
-export class CompendiumWeb extends Application {
+export class CompendiumWeb extends foundry.appv1.api.Application {
 
     static _pattern = /\s\([\w#\s]*\)/
     static _payloadPattern = new RegExp(CompendiumWeb._pattern, "g");

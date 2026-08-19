@@ -86,10 +86,16 @@ Hooks.once('init', async function () {
 
     //CONFIG.debug.hooks = true
 
-    foundry.applications.apps.DocumentSheetConfig.registerSheet(ActiveEffect, "swse", SWSEActiveEffectConfig, { makeDefault: true })
+    foundry.applications.apps.DocumentSheetConfig.registerSheet(ActiveEffect, "swse", SWSEActiveEffectConfig, {
+        label: "SWSE Active Effect Sheet",
+        makeDefault: true
+    })
     foundry.applications.apps.DocumentSheetConfig.registerSheet(Actor, "swse", SWSEActorSheet, {
         label: "SWSE Actor Sheet",
-        types: ["character", "npc", "vehicle", "vehicle-npc"], // adjust types as appropriate for your system
+        // Must match the Actor types declared in template.json: character, computer, vehicle.
+        // "computer" was missing, so computer actors silently fell back to the core sheet even
+        // though SWSEActorSheet#template resolves them to computer-sheet.hbs.
+        types: ["character", "computer", "vehicle"],
         makeDefault: true
     });
     foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "swse", SWSEItemSheet, {
@@ -778,20 +784,18 @@ async function rollVariable(actorId, variable) {
 
         let speaker = ChatMessage.getSpeaker();
         let messageData = {
-            user: game.user.id,
+            author: game.user.id,
             speaker,
             flavor,
-            style: CONST.CHAT_MESSAGE_TYPES.ROLL,
             content,
             sound: CONFIG.sounds.dice,
-            roll
+            rolls: [roll]
         }
 
         let cls = getDocumentClass("ChatMessage");
         let msg = new cls(messageData);
-        let rollMode = false;
 
-        cls.create(msg, {rollMode});
+        cls.create(msg);
     }
 }
 

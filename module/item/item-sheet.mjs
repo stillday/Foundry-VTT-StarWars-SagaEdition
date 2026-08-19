@@ -2,7 +2,7 @@
  * Extend the basic ItemSheet with some very simple modifications
  * @extends {ItemSheet}
  */
-import {getParentByHTMLClass, onCollapseToggle, toChat, toNumber} from "../common/util.mjs";
+import {changeModeChoices, getParentByHTMLClass, onCollapseToggle, toChat, toNumber} from "../common/util.mjs";
 import {
     _adjustPropertyBySpan,
     onChangeControl,
@@ -44,10 +44,7 @@ export class SWSEItemSheet extends foundry.appv1.sheets.ItemSheet {
     getData(options) {
         let data = super.getData(options);
 
-        data.modes = Object.entries(CONST.ACTIVE_EFFECT_MODES).reduce((obj, e) => {
-            obj[e[1]] = game.i18n.localize("EFFECT.MODE_"+e[0]);
-            return obj;
-        }, {})
+        data.modes = changeModeChoices();
         return data;
     }
 
@@ -520,16 +517,18 @@ export class SWSEItemSheet extends foundry.appv1.sheets.ItemSheet {
         this.item.safeUpdate(updateData);
     }
 
-    _onClassControl(event) {
+    async _onClassControl(event) {
         let element = $(event.currentTarget);
 
-        let highestLevel = this.object.levels.map(c => c.flags.swse.level).reduce((a,b)=> Math.max(a,b),0);
+        // `flags.swse.level` used to be missing on effects created by addClassLevel, which made
+        // highestLevel collapse to 0 and every click add another "Level 1".
+        let highestLevel = this.object.levels.map(c => c.flags.swse.level ?? 0).reduce((a,b)=> Math.max(a,b),0);
         switch (element.data("type")){
             case "add-level":
-                this.object.addClassLevel(highestLevel + 1)
+                await this.object.addClassLevel(highestLevel + 1)
                 break;
             case "remove-level":
-                this.object.removeClassLevel(highestLevel)
+                await this.object.removeClassLevel(highestLevel)
                 break;
         }
     }

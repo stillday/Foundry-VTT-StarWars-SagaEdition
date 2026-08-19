@@ -1,6 +1,6 @@
 import {getInheritableAttribute} from "../../../attribute-helper.mjs";
 import {defaultAttributes, getGroupedSkillMap, NEW_LINE, skillDetails, skills} from "../../../common/constants.mjs";
-import {resolveValueArray, toNumber} from "../../../common/util.mjs";
+import {resolveValueArray, toNumber, toStringValue} from "../../../common/util.mjs";
 import {generateArmorCheckPenalties} from "../../armor-check-penalty.mjs";
 import {DEFAULT_SKILL} from "../../../common/classDefaults.mjs";
 
@@ -557,8 +557,8 @@ export class SkillFunctions {
     _addSkillRerollNotes(reRollSkills, key, notes, skill) {
         let applicableRerolls = reRollSkills.filter(
             (reroll) =>
-                reroll.value.toLowerCase() === key ||
-                reroll.value.toLowerCase() === "any"
+                toStringValue(reroll.value).toLowerCase() === key ||
+                toStringValue(reroll.value).toLowerCase() === "any"
         );
         for (let reroll of applicableRerolls) {
             notes.push(

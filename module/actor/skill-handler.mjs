@@ -1,4 +1,4 @@
-import {resolveValueArray, toNumber} from "../common/util.mjs";
+import {resolveValueArray, toNumber, toStringValue} from "../common/util.mjs";
 import {getInheritableAttribute} from "../attribute-helper.mjs";
 import {generateArmorCheckPenalties} from "./armor-check-penalty.mjs";
 import {
@@ -221,7 +221,7 @@ export function generateSkills(actor, options = {}) {
 
             skill.isClass = resSkill === 'Use the Force' ? actor.isForceSensitive : classSkills.has(key)
 
-            let applicableRerolls = reRollSkills.filter(reroll => isRerollApplicable(reroll.value.split(":")[0], key, skill.attribute))
+            let applicableRerolls = reRollSkills.filter(reroll => isRerollApplicable(toStringValue(reroll.value).split(":")[0], key, skill.attribute))
 
             bonuses.push({value: halfCharacterLevel, description: `Half character level: ${halfCharacterLevel}`})
             bonuses.push({value: skillAttributeMod, description: `Attribute Mod: ${skillAttributeMod}`})
@@ -467,7 +467,7 @@ function getVehicleSkillBonuses(key, actor, shipModifier, applicableReRolls) {
         attributeKey: "skillReRoll"
     });
 
-    applicableReRolls.push(...reRollSkills.filter(reroll => reroll.value.toLowerCase() === positionlessKey || reroll.value.toLowerCase() === "any"))
+    applicableReRolls.push(...reRollSkills.filter(reroll => toStringValue(reroll.value).toLowerCase() === positionlessKey || toStringValue(reroll.value).toLowerCase() === "any"))
 
     let crewSkillBonus = crew.system.skills[positionlessKey]?.value || 0;
     let bonus = {

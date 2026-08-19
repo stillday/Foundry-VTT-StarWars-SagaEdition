@@ -2,11 +2,10 @@
   "id": "swse",
   "title": "Star Wars: Saga Edition",
   "description": "The Star Wars: Saga Edition system for FoundryVTT!",
-  "version": "13.2.4",
+  "version": "14.0.0",
   "compatibility": {
-    "minimum": 13,
-    "verified": 13,
-    "maximum": 13
+    "minimum": "14",
+    "verified": "14.367"
   },
   "authors": [
     {
@@ -369,6 +368,6 @@
   "secondaryTokenAttribute": "shields",
   "url": "https://github.com/kypvalanx/Foundry-VTT-StarWars-SagaEdition",
   "manifest": "https://raw.githubusercontent.com/kypvalanx/Foundry-VTT-StarWars-SagaEdition/main/system.json",
-  "download": "https://github.com/kypvalanx/Foundry-VTT-StarWars-SagaEdition/archive/refs/tags/13.2.4.zip",
+  "download": "https://github.com/kypvalanx/Foundry-VTT-StarWars-SagaEdition/archive/refs/tags/14.0.0.zip",
   "license": "https://creativecommons.org/licenses/by-sa/3.0/legalcode"
 }

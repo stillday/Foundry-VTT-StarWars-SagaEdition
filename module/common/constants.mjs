@@ -1,3 +1,59 @@
+/**
+ * SWSE's own change "mode" values.  These live on `system.changes` entries of Items, Actors and
+ * ActiveEffects (see template.json) and are persisted numerically in the compendium packs and in
+ * user worlds, so the numeric encoding must be preserved.
+ *
+ * This is deliberately NOT `CONST.ACTIVE_EFFECT_MODES` (deprecated in Foundry v14, removed in v16).
+ * Foundry's own ActiveEffect changes now use string types (`CONST.ACTIVE_EFFECT_CHANGE_TYPES`);
+ * SWSE keeps its numeric modes and normalises Foundry's string types into them on read
+ * (see `appendSourceMeta` in module/attribute-helper.mjs).
+ *
+ * The numeric values match the pre-v14 core values 0-5 so that existing data keeps working;
+ * POST_ROLL_MULTIPLY (6) is a SWSE-only extension that has never existed in core.
+ * @type {Readonly<Record<string, number>>}
+ */
+export const CHANGE_MODES = Object.freeze({
+    CUSTOM: 0,
+    MULTIPLY: 1,
+    ADD: 2,
+    DOWNGRADE: 3,
+    UPGRADE: 4,
+    OVERRIDE: 5,
+    POST_ROLL_MULTIPLY: 6
+});
+
+/**
+ * Maps Foundry v14 ActiveEffect change types (`CONST.ACTIVE_EFFECT_CHANGE_TYPES` keys) onto SWSE's
+ * numeric change modes.  Mirrors core's private `BaseActiveEffect##TYPES_TO_MODES`
+ * (common/documents/active-effect.mjs).  "subtract" has no SWSE equivalent and is intentionally
+ * absent, so it falls through to the ADD default, matching the behaviour before v14.
+ * @type {Readonly<Record<string, number>>}
+ */
+export const CHANGE_TYPE_TO_MODE = Object.freeze({
+    custom: CHANGE_MODES.CUSTOM,
+    multiply: CHANGE_MODES.MULTIPLY,
+    add: CHANGE_MODES.ADD,
+    downgrade: CHANGE_MODES.DOWNGRADE,
+    upgrade: CHANGE_MODES.UPGRADE,
+    override: CHANGE_MODES.OVERRIDE
+});
+
+/**
+ * Localisation keys for the change-mode select on the item/actor sheets.  Uses the v14 core keys
+ * (EFFECT.CHANGES.TYPES.*); the pre-v14 EFFECT.MODE_* keys no longer exist in core lang.
+ * Order defines the order of the options in the dropdown.  POST_ROLL_MULTIPLY is not offered in the UI,
+ * matching the previous behaviour where only core modes 0-5 were selectable.
+ * @type {Readonly<Record<number, string>>}
+ */
+export const CHANGE_MODE_LABELS = Object.freeze({
+    [CHANGE_MODES.CUSTOM]: "EFFECT.CHANGES.TYPES.custom",
+    [CHANGE_MODES.MULTIPLY]: "EFFECT.CHANGES.TYPES.multiply",
+    [CHANGE_MODES.ADD]: "EFFECT.CHANGES.TYPES.add",
+    [CHANGE_MODES.DOWNGRADE]: "EFFECT.CHANGES.TYPES.downgrade",
+    [CHANGE_MODES.UPGRADE]: "EFFECT.CHANGES.TYPES.upgrade",
+    [CHANGE_MODES.OVERRIDE]: "EFFECT.CHANGES.TYPES.override"
+});
+
 export const PHYSICAL_SKILLS = ["strength", "dexterity", "constitution"];
 export const dieSize = ["1", "1d2", "1d3", "1d4", "1d6", "1d8", "2d6", "2d8", "3d6", "3d8"];
 export const dieSize_vanilla = ["1", "1d2", "1d3", "1d4", "1d6", "1d8", "1d10", "1d12"];

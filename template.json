@@ -339,7 +339,8 @@
         "activeModes": []
       },
       "levels": {
-        "levels": []
+        "levels": [],
+        "levelsTaken": []
       }
     },
     "trait": {

@@ -161,7 +161,7 @@ export class AttackDelegate {
 
     async getAttackDialogueContent(attackCount, doubleAttack, tripleAttack) {
 
-        let template = await getTemplate("systems/swse/templates/actor/parts/attack/attack-dialogue.hbs")
+        let template = await foundry.applications.handlebars.getTemplate("systems/swse/templates/actor/parts/attack/attack-dialogue.hbs")
 
         const resolvedAttacks = this.attackOptions(doubleAttack, tripleAttack)
 
@@ -494,7 +494,7 @@ function createAttackFromAttackBlock(attackBlock, attackMods, damageMods) {
 }
 
 async function generateAttackCard(resolvedAttacks, attack) {
-    let template = await getTemplate("systems/swse/templates/actor/parts/attack/attack-chat-card.hbs")
+    let template = await foundry.applications.handlebars.getTemplate("systems/swse/templates/actor/parts/attack/attack-chat-card.hbs")
     return template({
         name: attack.name,
         notes: attack.notesHTML,
@@ -618,25 +618,22 @@ export async function makeAttack(data) {
     };
     //flags.swse.context.targets = targetActors.map(actor => actor.id);
 
-    const chatLog = ui.chat;
-
     let messageData = {
         flags,
-        user: game.user.id,
+        author: game.user.id,
         speaker: ChatMessage.getSpeaker({actor: attacks[0].actor}),
         flavor: flavor,
         content,
         sound: getSound(attacks),
-        roll,
-        rolls,
-        //type: chatLog?.mode ?? CONST.CHAT_MESSAGE_TYPES.IC
-    }
-
-    if (chatLog?.mode === CONST.CHAT_MESSAGE_TYPES.WHISPER) {
-        messageData.whisper = chatLog._getWhisperTargets();
+        rolls
     }
 
     let cls = getDocumentClass("ChatMessage");
+
+    // v14: message visibility (public/gm/blind/self) is applied via ChatMessage.applyMode,
+    // which reads the "core.messageMode" setting chosen in the chat sidebar.
+    cls.applyMode(messageData);
+
     let msg = new cls(messageData);
 
     // const rollMode = data.rollMode;
