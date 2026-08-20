@@ -583,27 +583,48 @@ export class SWSEItem extends Item {
         return true;
     }
 
+    /**
+     * Reduces one of the numeric armour defence keys over this item and every modification
+     * installed on it, and guarantees a number.
+     *
+     * `SUM` rather than `MAX`: an armour and each template/upgrade installed on it contribute their
+     * own change for the same key, and by the rules those stack.  `MAX` returned only the single
+     * largest change, so `Mandalorian Armor Template` (`equipmentFortitudeDefenseBonus: "+1"`) was
+     * invisible on any armour with a bonus of its own and the malus of `Durasteel Cast` /
+     * `Bonadan-Alloy Armor Template` (`-1`) was swallowed entirely.  On the shipped items, which
+     * carry at most one change per key, `SUM` and `MAX` agree.
+     *
+     * The numeric guard: `SUM` (resolveExpressionReduce -> addValues) skips a term it cannot read
+     * as a number once something numeric has been added, but hands the raw string back when nothing
+     * numeric was there.  `Arkanian General Template (armor)` ships
+     * `equipmentFortitudeDefenseBonus: "x2"` and `"x0"` - a notation this system never implemented -
+     * so on an armour without a Fortitude bonus of its own the reduction is the string `"x2x0"`,
+     * and `MAX` returned `"x2"` even when the armour did have one.  Either way the string reached
+     * the actor's defence arithmetic and made it `NaN`.  A change that does not resolve to a number
+     * contributes nothing.
+     *
+     * @param {string} attributeKey  `armorReflexDefenseBonus` or `equipmentFortitudeDefenseBonus`
+     * @returns {number}
+     */
+    _reduceNumericArmorBonus(attributeKey) {
+        const value = toNumber(getInheritableAttribute({
+            entity: this,
+            attributeKey,
+            reduce: "SUM"
+        }));
+        return typeof value === "number" && !Number.isNaN(value) ? value : 0;
+    }
+
     get fortitudeDefenseBonus() {
         if (this._parentIsProficientWithArmor()) {
-            return toNumber(getInheritableAttribute({
-                entity: this,
-                attributeKey: 'equipmentFortitudeDefenseBonus',
-                reduce: "MAX",
-
-
-            })) - toNumber(this.getStripping("reduceDefensiveMaterial"));
+            return this._reduceNumericArmorBonus('equipmentFortitudeDefenseBonus')
+                - toNumber(this.getStripping("reduceDefensiveMaterial"));
         }
         return 0;
     }
 
     get armorReflexDefenseBonus() {
-        let ardb = toNumber(getInheritableAttribute({
-            entity: this,
-            attributeKey: 'armorReflexDefenseBonus',
-            reduce: "MAX",
-
-
-        }));
+        let ardb = this._reduceNumericArmorBonus('armorReflexDefenseBonus');
         let rdm = toNumber(this.getStripping("reduceDefensiveMaterial"));
         return ardb - rdm;
     }
@@ -973,16 +994,13 @@ export class SWSEItem extends Item {
                 let makeMedium = this.createStripping('makeMedium', "Make Armor Medium", this.system.subtype === 'Light Armor');
                 strippings['makeMedium'] = makeMedium;
                 strippings['makeHeavy'] = this.createStripping('makeHeavy', "Make Armor Heavy", this.system.subtype === 'Medium Armor' || makeMedium.value);
-                let defensiveMaterial = Math.min(getInheritableAttribute({
-                        entity: this,
-                        attributeKey: "armorReflexDefenseBonus",
-                        reduce: "MAX",
-                    }),
-                    getInheritableAttribute({
-                        entity: this,
-                        attributeKey: "equipmentFortitudeDefenseBonus",
-                        reduce: "MAX",
-                    }));
+                // Same reduction as the two getters this cap is subtracted from - see
+                // #_reduceNumericArmorBonus.  With MAX the cap was understated for a modified
+                // armour, and Math.min() of the Arkanian string value made it NaN, which reached
+                // the item sheet as the `max` of a number input.
+                let defensiveMaterial = Math.min(
+                    this._reduceNumericArmorBonus("armorReflexDefenseBonus"),
+                    this._reduceNumericArmorBonus("equipmentFortitudeDefenseBonus"));
                 strippings['reduceDefensiveMaterial'] = this.createStripping('reduceDefensiveMaterial', "Reduce Defensive Material", defensiveMaterial > 0, "number", 0, defensiveMaterial);
 
                 let jointProtection = getInheritableAttribute({
