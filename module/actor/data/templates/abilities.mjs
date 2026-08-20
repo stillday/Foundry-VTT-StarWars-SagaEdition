@@ -163,6 +163,17 @@ export class AbilityFunctions {
                 rollLabel,
                 rollLabel
             );
+            // The compendium uses "@WISTOTAL" for the Wisdom score (the Sith Apprentice / Sith Lord
+            // / Transfer Essence prerequisite "Dark Side Score equal to or greater than your Wisdom
+            // score", which is also what `darkside.max` is derived from below).  Nothing registered
+            // that name, so resolveExpression handed the literal string "@WISTOTAL" to a numeric
+            // comparison and the prerequisite passed for everyone.
+            actor.setResolvedVariable(
+                "@" + key.toUpperCase() + "TOTAL",
+                ability.value,
+                rollLabel,
+                rollLabel
+            );
         }
 
 

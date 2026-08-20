@@ -50,11 +50,83 @@ function darkSideScore(target) {
     return darkside?.finalScore ?? darkside?.value ?? 0;
 }
 
+/**
+ * Normalises the child list of a composite prerequisite (AND / OR).  The pack data stores these
+ * either as an array or as an object keyed by index; a node with no children at all is malformed
+ * and must not be silently treated as satisfied.
+ * @param {Object[]|Object|undefined|null} value
+ * @returns {Object[]}
+ */
+function childPrerequisites(value) {
+    if (value === undefined || value === null) {
+        return [];
+    }
+    const children = ensureArray(value);
+    return children.filter(child => !!child);
+}
+
+/**
+ * Message for a prerequisite that carries no machine readable content (narrative "GM approval"
+ * style requirements, composite nodes without children).
+ * @param {Object} prereq
+ * @returns {string}
+ */
+function prerequisiteMessage(prereq) {
+    return `${prereq.text ?? `${prereq.type}: ${prereq.requirement ?? ""}`}`;
+}
+
+/**
+ * SPECIAL requirements that no data on the actor can decide - membership in an organisation, having
+ * built a lightsaber, GM approval, appendage counts (droid appendages are equipment items with a
+ * subtype, not a countable attribute) and the "Cyborg Hybrid" droid template, which does not exist
+ * as an item in any compendium.  These are reported as a visible, non blocking note so the player
+ * still sees them, instead of being treated as met (which is what the old fallthrough did for
+ * *every* SPECIAL requirement, including the ones that are perfectly checkable).
+ * @type {string[]}
+ */
+const UNVERIFIABLE_SPECIAL_REQUIREMENTS = [
+    "has built lightsaber",
+    "cyborg hybrid",
+    "sworn defender of emperor roan fel",
+    "must belong to a law enforcement",
+    "2+ appendages",
+    "2+ tool appendages",
+    "have a destiny",
+    "receive the gamemaster's approval",
+    "must possess an implant"
+];
+
+/**
+ * The item list a prerequisite is resolved against.
+ *
+ * `inheritableItems` calls `actor.itemsWithTypes`, which only exists on SWSEActor.  A good number of
+ * prerequisites are evaluated against an *item*: the change level prerequisites on the weapon and
+ * armor templates (ARMOR_TYPE / WEAPON_SIZE / DAMAGE_TYPE, resolved by getValues in
+ * attribute-helper.mjs against the item the template is applied to) and the provided item
+ * prerequisites on droid and vehicle templates.  For those, this line threw a TypeError before the
+ * switch even ran.  The old whole-loop try/catch turned that into "prerequisite met"; with the
+ * failure now reported it would turn into "prerequisite not met" and silently switch those changes
+ * off, so the item case has to be handled instead of thrown.  An item has no inheritable item list
+ * of its own - its own changes are read straight off the document by getInheritableAttribute.
+ * @param {SWSEActor|SWSEItem|Object} target
+ * @param {Object} options
+ * @returns {Object[]}
+ */
+function resolveItemsFor(target, options) {
+    if (options.embeddedItemOverride) {
+        return options.embeddedItemOverride;
+    }
+    if (typeof target?.itemsWithTypes !== "function") {
+        return [];
+    }
+    return inheritableItems(target);
+}
+
 function meetsPrerequisite(prereq, target, options) {
     const fn = () => {
         let failureList = [];
         let successList = [];
-        const resolvedItems = options.embeddedItemOverride || inheritableItems(target);
+        const resolvedItems = resolveItemsFor(target, options);
         switch (prereq.type.toUpperCase()) {
             case undefined:
                 break;
@@ -88,16 +160,27 @@ function meetsPrerequisite(prereq, target, options) {
                 }
                 failureList.push({fail: true, message: `${prereq.text}`});
                 break;
-            case 'DARK SIDE SCORE':
+            case 'DARK SIDE SCORE': {
                 // `system.darkside` (abilities.mjs / commondata.mjs) holds `value` plus the derived
                 // `finalScore` (= value + darksideTaint).  There is no `score`, so this read `undefined`
                 // and `!(undefined < n)` made every DARK SIDE SCORE prerequisite pass.
-                if (!(darkSideScore(target) < resolveValueArray([prereq.requirement], target))) {
+                // An unresolvable requirement has the same effect: resolveExpression returns the
+                // literal "@WISTOTAL" for an unknown variable and `!(0 < "@WISTOTAL")` is true, so
+                // the three "@WISTOTAL" prerequisites in the compendium passed for every character.
+                const requiredScore = Number(resolveValueArray([prereq.requirement], target));
+                if (!Number.isFinite(requiredScore)) {
+                    console.error("SWSE | DARK SIDE SCORE prerequisite does not resolve to a number",
+                        prereq.requirement, target?.name);
+                    failureList.push({fail: true, message: `${prerequisiteMessage(prereq)} (requirement "${prereq.requirement}" does not resolve to a number)`});
+                    break;
+                }
+                if (!(darkSideScore(target) < requiredScore)) {
                     successList.push({prereq, count: 1});
                     break;
                 }
-                failureList.push({fail: true, message: `${prereq.text}`});
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
                 break;
+            }
             case 'ITEM':
                 let filteredItem = resolvedItems.filter(feat => feat.finalName === prereq.requirement);
                 if (filteredItem.length > 0) {
@@ -112,6 +195,9 @@ function meetsPrerequisite(prereq, target, options) {
                     successList.push({prereq, count: 1});
                     break;
                 }
+                // The failure path used to `break` without pushing anything onto the failureList, so
+                // `doesFail` stayed false: every SPECIES prerequisite was met by every character.
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
                 break;
             case 'TRAINED SKILL':
                 if (target.trainedSkills.filter(skill => skill.label.toLowerCase() === prereq.requirement.toLowerCase() && skill.trained).length === 1) {
@@ -303,7 +389,9 @@ function meetsPrerequisite(prereq, target, options) {
                         break;
                     }
                 }
-                failureList.push({fail: false, message: `${prereq.text}`});
+                // was `fail: false`, which records the failure for display but never blocks -
+                // meaning membership in a Force tradition was never actually required.
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
                 break;
             case 'FORCE TECHNIQUE':
                 let ownedForceTechniques = filterItemsByTypes(resolvedItems, ["forceTechnique"]);
@@ -314,7 +402,11 @@ function meetsPrerequisite(prereq, target, options) {
                     }
                 }
 
-                let filteredForceTechniques = ownedForceTechniques.filter(feat => feat.data.finalName === prereq.requirement);
+                // `feat.data` does not exist on a v14 Item (it was the 0.8 era alias for `system`),
+                // so a *named* FORCE TECHNIQUE prerequisite threw a TypeError here.  The throw was
+                // swallowed by the try/catch in meetsPrerequisites, which skipped every remaining
+                // prerequisite of the same item and still reported doesFail = false.
+                let filteredForceTechniques = ownedForceTechniques.filter(feat => feat.finalName === prereq.requirement);
                 if (filteredForceTechniques.length > 0) {
                     if (!meetsPrerequisites(target, filteredForceTechniques[0].system.prerequisite, options).doesFail) {
                         successList.push({prereq, count: 1});
@@ -341,6 +433,41 @@ function meetsPrerequisite(prereq, target, options) {
                 }
                 failureList.push({fail: true, message: `${prereq.text}`});
                 break;
+            case 'FORCE SECRET': {
+                // Mirrors FORCE POWER / FORCE TECHNIQUE: either a count ("At least 1 Force Secret")
+                // or the name of a specific secret.  Without this branch the prerequisite fell
+                // through to `default:`, which only warned and never failed.
+                let ownedForceSecrets = filterItemsByTypes(resolvedItems, ["forceSecret"]);
+                if (!isNaN(prereq.requirement)) {
+                    if (!(ownedForceSecrets.length < parseInt(prereq.requirement))) {
+                        successList.push({prereq, count: 1});
+                        break;
+                    }
+                    failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                    break;
+                }
+                let filteredForceSecrets = ownedForceSecrets.filter(secret => secret.finalName === prereq.requirement);
+                if (filteredForceSecrets.length > 0) {
+                    if (!meetsPrerequisites(target, filteredForceSecrets[0].system.prerequisite, options).doesFail) {
+                        successList.push({prereq, count: 1});
+                        break;
+                    }
+                }
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                break;
+            }
+            case 'LANGUAGE': {
+                // Languages are owned items of type `language`; this used to fall through to
+                // `default:` and pass unconditionally.
+                let ownedLanguages = filterItemsByTypes(resolvedItems, ["language"]);
+                if (ownedLanguages.some(language => language.finalName === prereq.requirement
+                    || language.name === prereq.requirement)) {
+                    successList.push({prereq, count: 1});
+                    break;
+                }
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                break;
+            }
             case 'ATTRIBUTE':
                 if (prereq.requirement.includes(":")) {
                     let toks = prereq.requirement.split(":");
@@ -391,6 +518,11 @@ function meetsPrerequisite(prereq, target, options) {
                 failureList.push({fail: true, message: `${prereq.text ?? `${prereq.type}: ${prereq.requirement}`}`});
                 break;
             case 'NOT': {
+                if (!prereq.child) {
+                    console.warn("SWSE | NOT prerequisite without a child, cannot be evaluated", prereq);
+                    failureList.push({fail: false, unverifiable: true, message: prerequisiteMessage(prereq)});
+                    break;
+                }
                 let meetsChildPrereqs = meetsPrerequisites(target, prereq.child, options);
                 if (meetsChildPrereqs.doesFail) {
                     successList.push({prereq, count: 1});
@@ -401,7 +533,16 @@ function meetsPrerequisite(prereq, target, options) {
                 break;
             }
             case 'AND': {
-                let meetsChildPrereqs = meetsPrerequisites(target, prereq.children, options);
+                // `meetsPrerequisites(target, undefined)` returns doesFail = false, so a malformed
+                // composite node without children used to count as satisfied.  It cannot be decided,
+                // so report it as a visible note instead of a silent pass.
+                const andChildren = childPrerequisites(prereq.children);
+                if (andChildren.length === 0) {
+                    console.warn("SWSE | AND prerequisite without children, cannot be evaluated", prereq);
+                    failureList.push({fail: false, unverifiable: true, message: prerequisiteMessage(prereq)});
+                    break;
+                }
+                let meetsChildPrereqs = meetsPrerequisites(target, andChildren, options);
                 if (!(meetsChildPrereqs.doesFail)) {
                     successList.push({prereq, count: 1});
                     break;
@@ -414,13 +555,25 @@ function meetsPrerequisite(prereq, target, options) {
                 break;
             }
             case 'OR': {
-                let meetsChildPrereqs = meetsPrerequisites(target, prereq.children, options)
+                const orChildren = childPrerequisites(prereq.children);
+                if (orChildren.length === 0) {
+                    console.warn("SWSE | OR prerequisite without children, cannot be evaluated", prereq);
+                    failureList.push({fail: false, unverifiable: true, message: prerequisiteMessage(prereq)});
+                    break;
+                }
+                let meetsChildPrereqs = meetsPrerequisites(target, orChildren, options)
                 let count = 0;
                 for (let success of meetsChildPrereqs.successList) {
                     count += success.count;
                 }
 
-                if (!(count < prereq.count)) {
+                // A missing `count` made the comparison `count < undefined` - always false - so the
+                // OR passed no matter how many children failed.  "at least one of" is the meaning of
+                // an OR without an explicit count.
+                const requiredCount = Number.isFinite(Number(prereq.count)) && Number(prereq.count) > 0
+                    ? Number(prereq.count) : 1;
+
+                if (!(count < requiredCount)) {
                     successList.push({prereq, count: 1});
                     break;
                 }
@@ -432,55 +585,52 @@ function meetsPrerequisite(prereq, target, options) {
                 } else {
                     failureList.push({
                         fail: true,
-                        message: `at least ${prereq.count} of:`,
+                        message: `at least ${requiredCount} of:`,
                         children: meetsChildPrereqs.failureList
                     })
                 }
 
                 break;
             }
-            case 'SPECIAL':
-                if (prereq.requirement.toLowerCase() === 'not a droid') {
-                    let inheritableAttributesByKey = getInheritableAttribute({
+            case 'SPECIAL': {
+                // Every branch here used to either record nothing at all ("is a droid" / "not a
+                // droid") or a `fail: false` entry, so no SPECIAL requirement could ever block.
+                // The checkable ones now fail properly; the ones that no stored data can decide are
+                // pushed as an explicit, non blocking note (see UNVERIFIABLE_SPECIAL_REQUIREMENTS).
+                const specialRequirement = `${prereq.requirement ?? ""}`.trim().toLowerCase();
+
+                if (specialRequirement === 'not a droid' || specialRequirement === 'is a droid') {
+                    const isDroid = !!getInheritableAttribute({
                         entity: target,
                         recursive: true,
                         embeddedItemOverride: resolvedItems,
                         attributeKey: "isDroid",
                         reduce: "OR"
                     });
-                    if (!inheritableAttributesByKey) {
+                    if (isDroid === (specialRequirement === 'is a droid')) {
                         successList.push({prereq, count: 1});
                         break;
                     }
+                    failureList.push({fail: true, message: prerequisiteMessage(prereq)});
                     break;
-                } else if (prereq.requirement.toLowerCase() === 'is a droid') {
-                    if (getInheritableAttribute({
-                        entity: target,
-                        recursive: true,
-                        embeddedItemOverride: resolvedItems,
-                        attributeKey: "isDroid",
-                        reduce: "OR"
-                    })) {
-                        successList.push({prereq, count: 1});
-                        break;
-                    }
-                    break;
-                } else if (prereq.requirement === 'Has Built Lightsaber') {
-                    failureList.push({fail: false, message: `${prereq.type}: ${prereq.text}`});
-                    break;
-                } else if (prereq.requirement === 'is part of a military') {
-                    if (filterItemsByTypes(resolvedItems, ["affiliation"]).length > 0) {
-                        successList.push({prereq: prereq + " (missing an affiliation)", count: 1});
-                        break;
-                    }
-                } else if (prereq.requirement === 'is part of a major interstellar corporation') {
-                    if (filterItemsByTypes(resolvedItems, ["affiliation"]).length > 0) {
-                        successList.push({prereq: prereq + " (missing an affiliation)", count: 1});
-                        break;
-                    }
                 }
-                failureList.push({fail: false, message: `${prereq.text}`});
+
+                if (specialRequirement === 'is part of a military'
+                    || specialRequirement === 'is part of a major interstellar corporation') {
+                    if (filterItemsByTypes(resolvedItems, ["affiliation"]).length > 0) {
+                        successList.push({prereq, count: 1});
+                        break;
+                    }
+                    failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                    break;
+                }
+
+                if (!UNVERIFIABLE_SPECIAL_REQUIREMENTS.includes(specialRequirement)) {
+                    console.warn("SWSE | unrecognised SPECIAL prerequisite, treated as a note", prereq);
+                }
+                failureList.push({fail: false, unverifiable: true, message: prerequisiteMessage(prereq)});
                 break;
+            }
             case 'GENDER':
                 if (target.system.sex && target.system.sex.toLowerCase() === prereq.requirement.toLowerCase()) {
                     successList.push({prereq, count: 1});
@@ -564,12 +714,57 @@ function meetsPrerequisite(prereq, target, options) {
                 }
                 failureList.push({fail: true, message: `${prereq.text}`});
                 break;
+            case "ARMOR_TYPE": {
+                // Used by the Massassi armor template on its `armorCheckPenaltyOverride` changes
+                // ("Light"/"Medium"/"Heavy").  Armor items express the same thing as an `armorType`
+                // change whose value is "Light Armor"/"Medium Armor"/"Heavy Armor".  This type was
+                // missing from the switch, so it used to fall through to `default:` and pass.
+                const armorTypes = getInheritableAttribute({
+                    entity: target,
+                    recursive: true,
+                    embeddedItemOverride: resolvedItems,
+                    attributeKey: "armorType",
+                    reduce: "VALUES_TO_LOWERCASE"
+                });
+                const requiredArmorType = `${prereq.requirement ?? ""}`.trim().toLowerCase();
+                if (armorTypes.some(type => type === requiredArmorType
+                    || type === `${requiredArmorType} armor`
+                    || type.startsWith(`${requiredArmorType} `))) {
+                    successList.push({prereq, count: 1});
+                    break;
+                }
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                break;
+            }
+            case "CONDITION": {
+                // Vehicle / droid templates hand out traits ("Strength (+2)", "Starship Armor (+2)")
+                // whose prerequisite is a position on the condition track - the bonus is lost once the
+                // vehicle takes a step down.  `SWSEActor#condition` returns 0 or the condition value
+                // of the active condition effect.  Also missing from the switch before.
+                const currentCondition = `${target?.condition ?? target?.parent?.condition ?? 0}`;
+                if (currentCondition === `${prereq.requirement ?? ""}`.trim()) {
+                    successList.push({prereq, count: 1});
+                    break;
+                }
+                failureList.push({fail: true, message: prerequisiteMessage(prereq)});
+                break;
+            }
             default:
-                console.warn("this prereq is not supported", prereq)
+                // An unsupported prerequisite type used to only warn, which left `doesFail` false and
+                // let the requirement through.  A gap in this switch is a coding error and must be
+                // loud, not permissive.
+                console.error("SWSE | unsupported prerequisite type, treated as not met", prereq);
+                failureList.push({fail: true, message: `${prerequisiteMessage(prereq)} (unsupported prerequisite type "${prereq.type}")`});
         }
         return {failureList, successList}
     }
-    return !!options.prerequisiteCache ? options.prerequisiteCache.getCached({
+    // SimpleCache builds its key by string-concatenating the property values, and `options`
+    // stringifies to "[object Object]".  AND / OR / NOT nodes have no `requirement`, so *every*
+    // composite node of the same type produced the identical key and the second one in a tree got
+    // the first one's answer.  Composite nodes are cheap (their children are cached individually),
+    // so they are not cached at all.
+    const isComposite = ["AND", "OR", "NOT"].includes(`${prereq.type}`.toUpperCase());
+    return (!!options.prerequisiteCache && !isComposite) ? options.prerequisiteCache.getCached({
         type: prereq.type,
         requirement: prereq.requirement,
         options: options
@@ -612,14 +807,23 @@ export function meetsPrerequisites(target, prereqs, options = {}) {
 
     let failureList = [];
     let successList = [];
-    try {
-        for (let prereq of prereqs) {
+    for (let prereq of prereqs) {
+        // The try/catch used to wrap the whole loop: one prerequisite throwing (a named FORCE
+        // TECHNIQUE requirement did, via `feat.data.finalName`) aborted the loop, skipped every
+        // remaining prerequisite of the item and still reported doesFail = false - the item became
+        // free to take.  Guard each prerequisite on its own and make the failure visible instead.
+        try {
             let response = meetsPrerequisite(prereq, target, options);
             failureList.push(...response.failureList)
             successList.push(...response.successList)
+        } catch (e) {
+            console.error("SWSE | could not evaluate prerequisite", {prereq, target, options, error: e});
+            failureList.push({
+                fail: true,
+                error: true,
+                message: `${prerequisiteMessage(prereq ?? {})} (could not be evaluated: ${e?.message ?? e})`
+            });
         }
-    } catch (e) {
-        console.error(e, prereqs, target, options)
     }
     let doesFail = false;
     for (let fail of failureList) {

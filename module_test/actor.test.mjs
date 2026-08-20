@@ -409,3 +409,105 @@ test('addClassLevel reports a rejected effect creation instead of half applying 
     expect(updated, "levelsTaken must not grow without a level effect").to.equal(false);
     expect(ui.notifications.messages.filter(m => m.type === "error").length).to.equal(1);
 });
+
+// ---------------------------------------------------------------------------------------------
+// getResolvedSize: precedence between a size *change* (species/trait/base type), the size stored
+// on the actor (`system.size`) and the type default.  The Medium default for character/npc actors
+// was introduced so a speciesless character stops reporting "Fine" (index 0), but it also
+// overrode a stored size: 28 of 644 sampled compendium characters declare Large/Small/Huge/Tiny/
+// Diminutive/Gargantuan/Colossal in their statblock and computed as Medium, which silently
+// falsified Reflex Defense, grapple, damage threshold and fighting space.
+// ---------------------------------------------------------------------------------------------
+import {getResolvedSize} from '../module/attribute-helper.mjs';
+import {sizeArray} from '../module/common/constants.mjs';
+
+function sizeActor(type, storedSize, changes = []) {
+    const actor = new SWSEActor({name: `${type} ${storedSize}`, system: {size: storedSize, changes}});
+    actor.type = type;
+    actor._source = {system: {size: storedSize}};
+    actor.system.changes = changes;
+    actor.resolvedVariables = new Map();
+    return actor;
+}
+
+test('getResolvedSize keeps a size stored on the actor', () => {
+    for (const stored of ["Large", "Small", "Huge", "Tiny", "Diminutive", "Gargantuan", "Colossal"]) {
+        const actor = sizeActor("character", stored);
+        expect(sizeArray[getResolvedSize(actor)], stored).to.equal(stored);
+    }
+});
+
+test('getResolvedSize still defaults a character with nothing at all to Medium, not Fine', () => {
+    const actor = new SWSEActor({name: "blank", system: {}});
+    actor.type = "character";
+    actor.resolvedVariables = new Map();
+    expect(sizeArray[getResolvedSize(actor)]).to.equal("Medium");
+
+    // an invalid stored value must not win either
+    const bogus = sizeActor("character", "Variable (See Above)");
+    expect(sizeArray[getResolvedSize(bogus)]).to.equal("Medium");
+});
+
+test('getResolvedSize lets a size change win over the stored size', () => {
+    // this is the 37 vehicles / 5 characters case: system.size is the never-updated template
+    // default while the real size comes from a vehicle base type or a species trait
+    const vehicle = sizeActor("vehicle", "Medium", [{key: "size", value: "Colossal"}]);
+    expect(sizeArray[getResolvedSize(vehicle)]).to.equal("Colossal");
+
+    const smallSpecies = sizeActor("character", "Medium", [{key: "size", value: "Small"}]);
+    expect(sizeArray[getResolvedSize(smallSpecies)]).to.equal("Small");
+
+    // and a stored size does not block a sizeBonus on top of it
+    const grown = sizeActor("character", "Small", [{key: "sizeBonus", value: "1"}]);
+    expect(sizeArray[getResolvedSize(grown)]).to.equal("Medium");
+});
+
+test('providedTraits turns providedTrait changes into trait items, once each', () => {
+    const actor = new SWSEActor({name: "Ace", system: {}});
+    const classItem = {
+        id: "ace-pilot",
+        name: "Ace Pilot",
+        type: "class",
+        system: {levelsTaken: [1, 2], changes: [
+            {key: "providedTrait", value: "Vehicle Dodge"},
+            {key: "providedTrait", value: "Vehicle Dodge"},
+            {key: "provides", value: "Ace Pilot Talent Trees"}
+        ]},
+        effects: []
+    };
+
+    const first = actor.providedTraits(classItem);
+    expect(first.length).to.equal(2);
+    expect(first.every(t => t.type === "TRAIT" && t.name === "Vehicle Dodge" && t.parent === classItem))
+        .to.equal(true);
+
+    // one of them has already been granted by this class -> only the missing one is requested
+    actor.itemTypes.trait = [
+        {name: "Vehicle Dodge", finalName: "Vehicle Dodge", system: {supplier: {id: "ace-pilot"}}}
+    ];
+    expect(actor.providedTraits(classItem).length).to.equal(1);
+
+    // both granted -> nothing left to do (idempotent)
+    actor.itemTypes.trait = [
+        {name: "Vehicle Dodge", finalName: "Vehicle Dodge", system: {supplier: {id: "ace-pilot"}}},
+        {name: "Vehicle Dodge", finalName: "Vehicle Dodge", system: {supplier: {id: "ace-pilot"}}}
+    ];
+    expect(actor.providedTraits(classItem).length).to.equal(0);
+
+    // a trait of the same name from a *different* source does not count as granted by this class
+    actor.itemTypes.trait = [
+        {name: "Vehicle Dodge", finalName: "Vehicle Dodge", system: {supplier: {id: "some-species"}}}
+    ];
+    expect(actor.providedTraits(classItem).length).to.equal(2);
+
+    // uploads must not trigger item creation
+    expect(actor.providedTraits(classItem, {isUpload: true}).length).to.equal(0);
+});
+
+test('formulaFunctions is usable through the Map API it is read with', () => {
+    const actor = new SWSEActor({name: "formula", system: {}});
+    actor.prepareData();
+    expect(actor.formulaFunctions instanceof Map).to.equal(true);
+    expect(actor.formulaFunctions.size).to.be.greaterThan(0);
+    expect(typeof actor.formulaFunctions.get('@charLevel')).to.equal('function');
+});

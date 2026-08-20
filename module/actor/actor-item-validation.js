@@ -373,7 +373,13 @@ const handlePrerequisites = async (context) => {
     if (EQUIPABLE_TYPES.includes(context.entity.type)) {
         return true;
     }
-    let meetsPrereqs = meetsPrerequisites(context.actor, context.entity.system.prerequisite, {isLoad: true});
+    // This validator IS the "adding a new item" path (drag & drop, compendium browser, class level
+    // up), so both switches have to answer here: `ignorePrerequisites` ("Ignore Prerequisites",
+    // gated on isLoad) and `ignorePrerequisitesOnDrop` ("Ignore Prerequisites when adding new
+    // Items", gated on isAdd).  Only isLoad was passed, so the second switch did nothing on the
+    // very path its label describes - it only ever applied to equipping an item.
+    let meetsPrereqs = meetsPrerequisites(context.actor, context.entity.system.prerequisite,
+        {isLoad: true, isAdd: true});
     if (!meetsPrereqs.doesFail) {
         if (meetsPrereqs.failureList.length > 0) {
             suppressibleDialog.call(context.actor, context.entity,

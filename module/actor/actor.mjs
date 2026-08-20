@@ -57,7 +57,11 @@ class SWSEActor extends Actor {
         this.resolvedNotes = new Map();
         this.resolvedLabels = new Map();
         this.formulaFunctions = new Map();
-        this.formulaFunctions['@charLevel'] = (actor) => actor.characterLevel;
+        // `formulaFunctions` is a Map and util.mjs#getVariableFromActorData reads it with `.get()`.
+        // Assigning with property syntax put the entry on the Map *object* instead of into the Map,
+        // so the fallback resolver was dead code (`size` stayed 0) and `@charLevel` only resolved
+        // through `resolvedVariables`, i.e. after characterLevel had been computed once.
+        this.formulaFunctions.set('@charLevel', (actor) => actor.characterLevel);
         if (this.skipPrepare) {
             return;
         }
@@ -2395,7 +2399,9 @@ class SWSEActor extends Actor {
                 levels.push(nextLevel);
                 await existing.safeUpdate({"system.levelsTaken": levels});
                 let notificationMessage = `<li>Took level of ${existing.name}</li>`
-                return {notificationMessage, addedItem: undefined}
+                // Taking another level of a class the character already has returns here, so this is
+                // the only place where the features of levels 2..N can be granted.
+                return {notificationMessage, addedItem: undefined, toBeAdded: this.providedTraits(existing, context)}
             }
 
             entity.system.levelsTaken = [nextLevel];
@@ -2524,6 +2530,7 @@ class SWSEActor extends Actor {
             if (entity.type === "class") {
                 toBeAdded.push(...await this.addClassFeats(addedItem, providedItemContext));
             }
+            toBeAdded.push(...this.providedTraits(addedItem, context));
 
             const resolvedMods = (await Promise.all(modifications.map(m => resolveEntity(m)))).map(m=>m.entity);
             await addedItem.addItemModificationEffectsFromItems(resolvedMods, providedItemContext);
@@ -2548,6 +2555,53 @@ class SWSEActor extends Actor {
 
     static removeChange(entity, key, forceAdd = false, source = undefined) {
         entity.system.changes = (entity.system.changes || Object.values(entity.system.attributes)).filter(v => v.key !== key && v.source !== source);
+    }
+
+    /**
+     * Items granted through `providedTrait` changes.
+     *
+     * A class level effect declares the features that level hands out as
+     * `{key: "providedTrait", value: "<trait name>"}` (150 such changes across 29 classes, almost
+     * all of them prestige classes).  Nothing ever read that key - `getInheritableAttribute` has no
+     * consumer for it and the granting pipeline only knows `providedItems` and `provides` - so
+     * prestige class features were never actually added to the character.
+     *
+     * The change is level gated by `isActiveDocument` (attribute-helper.mjs), so this returns exactly
+     * the traits the levels *taken so far* grant.  Traits repeated on several levels (Ace Pilot grants
+     * "Vehicle Dodge" at 2/4/6/8/10) are counted, and traits this same source already granted are
+     * subtracted, which makes the method idempotent: calling it again adds nothing.
+     *
+     * @param item {SWSEItem} the item whose changes are inspected, and the supplier of the traits
+     * @param context {Object}
+     * @return {Object[]} provided item descriptors for addItems()
+     */
+    providedTraits(item, context = {}) {
+        if (!item || context.isUpload) {
+            return [];
+        }
+
+        const requested = {};
+        for (const change of getInheritableAttribute({entity: item, attributeKey: "providedTrait"})) {
+            const name = toStringValue(change.value)?.trim();
+            if (!name) {
+                continue;
+            }
+            requested[name] = (requested[name] ?? 0) + 1;
+        }
+
+        const toBeAdded = [];
+        for (const [name, count] of Object.entries(requested)) {
+            const alreadyGranted = this.itemTypes.trait
+                .filter(trait => (trait.name === name || trait.finalName === name)
+                    && trait.system?.supplier?.id === item.id).length;
+            for (let i = alreadyGranted; i < count; i++) {
+                toBeAdded.push({type: "TRAIT", name, parent: item});
+            }
+        }
+        if (toBeAdded.length > 0) {
+            console.debug(`SWSE | ${item.name} grants traits:`, toBeAdded.map(t => t.name));
+        }
+        return toBeAdded;
     }
 
     /**

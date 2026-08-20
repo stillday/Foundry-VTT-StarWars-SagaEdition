@@ -89,6 +89,24 @@ function getChangesFromEmbeddedItems(entity, itemFilter, embeddedItemOverride) {
 }
 
 /**
+ * The size index of the size stored on the entity itself (`system.size`).  Actors carry a persisted
+ * size (DataModel default "Medium", see actor/data/templates/traits.mjs) which is what the sheet and
+ * `getGridSizeFromSize` show; before this was read here, an actor whose size came from its statblock
+ * rather than from a size trait resolved to the Medium default and computed Reflex Defense, grapple,
+ * damage threshold and fighting space for the wrong size.
+ * @param {*} entity
+ * @returns {number|null} index into sizeArray, or null when nothing valid is stored
+ */
+function storedSizeIndex(entity) {
+    const stored = entity?._source?.system?.size ?? entity?.system?.size;
+    if (typeof stored !== "string") {
+        return null;
+    }
+    const index = sizeArray.indexOf(stored.trim());
+    return index > -1 ? index : null;
+}
+
+/**
  * The size index used when nothing on an entity declares a size.
  * @param {*} entity
  * @returns {number} index into sizeArray
@@ -139,12 +157,19 @@ export function getResolvedSize(entity, options = {}) {
                 }
             }
         }
-        // Nothing on the entity states a size.  `0` is "Fine", which is what a speciesless
-        // character used to report; a character actor without a species defaults to Medium instead.
+        // Nothing among the changes states a size.  Precedence from here on:
+        //   1. a size *change* (species/trait/vehicle base type) - handled above, it wins
+        //   2. the size stored on the entity (`system.size`)
+        //   3. the type default: Medium for character/npc, index 0 ("Fine") otherwise
+        // Step 2 is what makes an actor that declares "Large" in its statblock but carries no size
+        // trait stay Large; without it the Medium default from step 3 overrode a stored value.
         // Tracked separately from the loop so an explicitly *smaller* size (Small species) is not
-        // raised to Medium by the Math.max above.
+        // raised by the Math.max above.
         // ASSUMPTION: Medium is the neutral default for character/npc actors (every playable
         // species in SWSE is Small or Medium); everything else keeps the previous default.
+        if (sizeIndex === null) {
+            sizeIndex = storedSizeIndex(entity);
+        }
         if (sizeIndex === null) {
             sizeIndex = defaultSizeIndex(entity);
         }
@@ -175,6 +200,17 @@ export function getResolvedSize(entity, options = {}) {
 function getLocalChangesFilter(document, flags = []) {
     if(flags.includes("REQUESTED_BY_ACTOR")) {
         if(document.type === "weapon"){
+            // WEAPON_INCLUSION_LIST is empty, so an *equipped* weapon (equipped items are part of
+            // inheritableItems) contributes nothing to its wielder.  That is deliberate, not an
+            // oversight: every change key that appears on a weapon in the compendium is weapon
+            // local (damage, damageType, size, weight, cost, availability, ammo, actsAs,
+            // unarmedBonusDamage, toHitModifier, ...) and every consumer reads it off the weapon
+            // document itself - attack.mjs queries `entity: item` and even filters weapons out
+            // explicitly with `itemFilter: item => item.type !== 'weapon'`.  Populating the list
+            // would leak a weapon's damage, size and cost onto the actor.  Verified in a live
+            // client: with the list filled with all 22 weapon change keys, an actor with three
+            // equipped weapons inherits exactly those weapon local values and nothing that any
+            // reader wants.  Add a key here only when the wielder is supposed to inherit it.
             return (c => WEAPON_INCLUSION_LIST.includes(c.key))
         }
     }

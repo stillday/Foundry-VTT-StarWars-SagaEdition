@@ -128,7 +128,11 @@ SWSE.conditionTrack = ["0", "-1", "-2", "-5", "-10", "OUT"]
 
 
 /**
- * set the available attributes for an item attribute field
+ * Intended as the list of attributes offered in an item attribute field.  Nothing reads it: a
+ * search over module/, templates/ and lang/ finds only this assignment, and it is empty at runtime
+ * (verified in a live client).  Kept as the extension point it was meant to be - the change key
+ * pickers build their options from constants.mjs instead - but note that populating it has no
+ * effect until something consumes it.
  * @type {*[]}
  */
 SWSE.RecognizedAttributes = [];
