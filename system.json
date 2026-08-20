@@ -372,7 +372,7 @@
   "primaryTokenAttribute": "health",
   "secondaryTokenAttribute": "shields",
   "url": "https://github.com/stillday/Foundry-VTT-StarWars-SagaEdition",
-  "manifest": "https://raw.githubusercontent.com/stillday/Foundry-VTT-StarWars-SagaEdition/v14/system.json",
+  "manifest": "https://raw.githubusercontent.com/stillday/Foundry-VTT-StarWars-SagaEdition/main/system.json",
   "download": "https://github.com/stillday/Foundry-VTT-StarWars-SagaEdition/archive/refs/tags/14.1.0.zip",
   "license": "https://creativecommons.org/licenses/by-sa/3.0/legalcode"
 }
