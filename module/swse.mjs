@@ -293,7 +293,7 @@ const applyAttack = async (event) => {
             await targetActor.applyDamage({
                 damage: attackSummary.damage,
                 affectDamageThreshold: true,
-                damageType: attackSummary.damageType,
+                damageTypes: attackSummary.damageTypes ?? attackSummary.damageType,
                 skipShields: false,
                 skipDamageReduction: false,
                 halfDamage: attackSummary.result === "Half Damage"

@@ -176,5 +176,11 @@ export class VehicleDataModel extends SystemDataModel.mixin(...vehicleFunctionCl
         // entries carrying `defenseBlock`).  The vehicle defence panel was therefore column
         // headers over nothing.  Runs after the abilities, whose modifiers it needs.
         this._prepareDefenseDerivedData();
+
+        // Shields.  ShieldFunctions is mixed in and every starship shield generator in
+        // swse.vehicle-systems carries a `shieldRating` change, but the preparation was never
+        // called for vehicles, so `system.shields.max` stayed null on every one of them and the
+        // shield rating those systems provide did nothing at all.
+        this._prepareShieldsDerivedData();
     }
 }

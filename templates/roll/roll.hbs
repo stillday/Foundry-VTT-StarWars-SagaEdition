@@ -3,5 +3,6 @@
         <div class="dice-formula">{{roll._formula}}</div>
         <div class="dice-tooltip">{{> 'systems/swse/templates/roll/roll-tooltip.hbs' roll=roll}}</div>
         <h4 class="dice-total {{#if critical}}critical{{/if}} {{#if fail}}fail{{/if}}">{{roll._total}}</h4>
+        {{#if damageType}}<div class="damage-type">{{damageType}}</div>{{/if}}
     </div>
 </div>

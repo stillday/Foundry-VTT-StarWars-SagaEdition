@@ -891,16 +891,6 @@ export class SWSEItem extends Item {
         return damageDie;
     }
 
-    get damageType() {
-        let attributes = getInheritableAttribute({
-            entity: this,
-            attributeKey: 'damageType',
-
-
-        });
-        return attributes.map(attribute => attribute.value).join(', ');
-    }
-
     get finalName() {
         return SWSEItem.buildItemName(this);
     }

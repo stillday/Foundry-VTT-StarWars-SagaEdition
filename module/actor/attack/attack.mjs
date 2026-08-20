@@ -30,8 +30,10 @@ import {
     plus,
     resolveValueArray,
     toNumber,
-    toShortAttribute
+    toShortAttribute,
+    unique
 } from "../../common/util.mjs";
+import {hasDamageType, resolveDamageTypes} from "../../common/conditionalHelpers.mjs";
 import {SimpleCache} from "../../common/simple-cache.mjs";
 import {weaponGroup} from "../../common/constants.mjs";
 import {SWSE} from "../../common/config.mjs";
@@ -809,12 +811,13 @@ export class Attack {
             entity: itemData,
             attributeKey: 'special'
         })
-        let type = this.type;
-        if ('Stun' === type || type.includes("Energy (Stun)") || type.includes("Stun")) {
+        // Substring matching on the joined type string used to make "Ionizing" or a weapon named
+        // after a type answer yes; the note follows the resolved type list instead.
+        const damageTypes = this.damageTypes;
+        if (hasDamageType(damageTypes, "Stun", "Energy (Stun)")) {
             notes.push({href: "https://swse.fandom.com/wiki/Stun_Damage", value: "Stun Damage"})
-
         }
-        if ('Ion' === type || type.includes("Energy (Ion)") || type.includes("Ion")) {
+        if (hasDamageType(damageTypes, "Ion", "Energy (Ion)")) {
             notes.push({href: "https://swse.fandom.com/wiki/Ion_Damage", value: "Ion Damage"})
         }
 
@@ -924,11 +927,18 @@ export class Attack {
         return 2 + bonus
     }
 
-    get type() {
+    /**
+     * Every damage type this attack deals, as a list.  A weapon carries one `damageType` change per
+     * type, so "Energy and Slashing" is two changes and therefore two entries here - the whole
+     * pipeline (shields, damage reduction, Ion/Stun, prerequisites) works off the list.
+     *
+     * @return {string[]}
+     */
+    get damageTypes() {
         let item = this.item;
 
         if (!item) {
-            return;
+            return [];
         }
         let attributes = getInheritableAttribute({
             entity: item,
@@ -936,15 +946,26 @@ export class Attack {
             reduce: "VALUES"
         });
 
+        attributes = resolveDamageTypes(attributes);
+
         if (attributes.length === 0 && item.type === "vehicleSystem") {
             attributes.push("Energy");
         }
 
-        if (attributes.length > 1 && attributes.includes("Varies")) {
+        if (attributes.length > 1) {
             attributes = attributes.filter(x => x !== "Varies");
         }
 
-        return attributes.join(', ');
+        return attributes.filter(unique);
+    }
+
+    get type() {
+        let item = this.item;
+
+        if (!item) {
+            return;
+        }
+        return this.damageTypes.join(', ');
     }
 
     get modes() {
@@ -1401,6 +1422,7 @@ export class Attack {
                 attack: response.attack,
                 damage: response.damage,
                 damageType: this.type,
+                damageTypes: this.damageTypes,
                 notes: this.notes,
                 critical,
                 fail: autoMiss,
@@ -1428,6 +1450,7 @@ export class Attack {
                 attack: modifiedRoll,
                 damage: modifiedDamageRoll,
                 damageType: this.type,
+                damageTypes: this.damageTypes,
                 notes: this.notes,
                 critical,
                 fail: autoMiss,
@@ -1791,6 +1814,7 @@ function toTarget(actor, attackRoll, autoMiss, autoHit, critical, areaAttack, da
         notes: attack.notes,
         damage: damage.total,
         damageType: attack.type,
+        damageTypes: attack.damageTypes,
     }
 }
 

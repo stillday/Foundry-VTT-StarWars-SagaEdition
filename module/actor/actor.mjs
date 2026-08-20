@@ -1,7 +1,6 @@
 import {resolveShield} from "./health.mjs";
 import {
     ALPHA_FINAL_NAME,
-    COMMMA_LIST,
     convertOverrideToMode,
     filterItemsByTypes,
     getActorFromId,
@@ -33,7 +32,7 @@ import {generateAction} from "../action/generate-action.mjs";
 import {ActorAmmunitionDelegate} from "../item/ammunition/ammunitionDelegate.mjs";
 import {WeightDelegate} from "./weightDelegate.mjs";
 import {getGridSizeFromSize} from "./size.mjs";
-import {bypassShields} from "../common/conditionalHelpers.mjs";
+import {applyDamageReduction, bypassShields, hasDamageType, resolveDamageTypes} from "../common/conditionalHelpers.mjs";
 import {depthMerge, titleCase} from "../common/helpers.mjs";
 import {CrewDelegate} from "./crewDelegate.mjs";
 
@@ -1434,7 +1433,8 @@ class SWSEActor extends Actor {
      *
      * @param options
      * @param options.damage
-     * @param options.damageType
+     * @param options.damageType a single damage type or an authored list ("Energy, Slashing")
+     * @param options.damageTypes an already split array of damage types; wins over damageType
      * @param options.skipShields
      * @param options.skipDamageReduction
      * @param options.affectDamageThreshold
@@ -1448,7 +1448,10 @@ class SWSEActor extends Actor {
             totalDamage = Math.floor(totalDamage/2);
         }
 
-        const damageTypes = options.damageType.split(COMMMA_LIST);
+        // A weapon can deal more than one damage type at once, and the caller may hand us either an
+        // array or an authored string.  A missing damage type is not an error - untyped damage
+        // simply matches no type-specific reduction.
+        const damageTypes = resolveDamageTypes(options.damageTypes ?? options.damageType);
 
         let resultFlavor = "";
         if (!options.skipShields && !bypassShields(damageTypes)) {
@@ -1471,17 +1474,7 @@ class SWSEActor extends Actor {
                 reduce: "OR"
             })
 
-            if (!damageTypes.includes("Lightsabers") || lightsaberResistance) {
-                for (let damageReduction of damageReductions) {
-                    let modifier = damageReduction.modifier || "";
-
-                    let modifiers = modifier.split(COMMMA_LIST);
-                    let innerJoin1 = innerJoin(damageTypes, modifiers);
-                    if (!modifier || innerJoin1.length === 0) {
-                        totalDamage = Math.max(totalDamage - toNumber(damageReduction.value), 0)
-                    }
-                }
-            }
+            totalDamage = applyDamageReduction(totalDamage, damageTypes, damageReductions, lightsaberResistance);
         }
 
         let conditionReduction = 1;
@@ -1490,27 +1483,30 @@ class SWSEActor extends Actor {
 
         let damageThreshhold = this.system.defense.damageThreshold.total;
         let reducedToZero = false;
-        if(damageTypes.includes("Energy (Ion)")){
+        // Ion and Stun are independent descriptors: a weapon can carry both, and each one has to be
+        // resolved on its own.  They used to be an if/else chain, so Ion silently swallowed Stun.
+        if(hasDamageType(damageTypes, "Energy (Ion)")){
             if (this.takesFullDamageFromIon) {
                 if(totalDamage >= currentHealth){
-                    conditionReduction = 5;
+                    conditionReduction = Math.max(conditionReduction, 5);
                     resultFlavor += "The Ion Damage reduced hitpoints to 0 and has caused them to become helpless. "
                     reducedToZero = true;
                 } else if(totalDamage > damageThreshhold){
-                    conditionReduction = 2;
+                    conditionReduction = Math.max(conditionReduction, 2);
                     resultFlavor += "An additional step was taken down the condition track due to Ion Damage. "
                 }
             } else {
                 totalDamage = Math.floor(totalDamage / 2);
             }
-        } else if(damageTypes.includes("Energy (Stun)")){
+        }
+        if(hasDamageType(damageTypes, "Energy (Stun)")){
             if(this.isEffectedByStun){
                 if(totalDamage >= currentHealth){
-                    conditionReduction = 5;
+                    conditionReduction = Math.max(conditionReduction, 5);
                     resultFlavor += "The Stun Damage reduced hitpoints to 0 and has caused them to become helpless. "
                     reducedToZero = true;
                 } else if(totalDamage > damageThreshhold){
-                    conditionReduction = 2;
+                    conditionReduction = Math.max(conditionReduction, 2);
                     resultFlavor += "An additional step was taken down the condition track due to Stun Damage. "
                 }
             } else {
