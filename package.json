@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Star Wars: Saga Edition system",
   "scripts": {
-    "test": "node --import ./module_test/setup.mjs --test module_test/**/*.test.mjs",
+    "test": "node --import ./module_test/setup.mjs --test module_test/*.test.mjs",
     "build": "gulp",
     "compile": "gulp css",
     "watch": "gulp",

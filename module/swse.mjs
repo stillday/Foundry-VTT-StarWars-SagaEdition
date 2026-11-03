@@ -22,6 +22,7 @@ import {buildRollContent} from "./common/chatMessageHelpers.mjs";
 import {SWSETokenDocument} from "./token/token-document.mjs";
 import {CharacterDataModel} from "./actor/data/characterdata.mjs";
 import {VehicleDataModel} from "./actor/data/vehicledata.mjs";
+import {registerWikiLink} from "./common/wiki-link.mjs";
 
 
 
@@ -32,6 +33,7 @@ Hooks.once('quenchReady',  (quench) => {
 
 
 Hooks.once('init', async function () {
+    registerWikiLink();
 
 
     game.swse = {
@@ -78,7 +80,7 @@ Hooks.once('init', async function () {
     CONFIG.Actor.dataModels.character = CharacterDataModel;
     CONFIG.Actor.dataModels.npc = CharacterDataModel;
     CONFIG.Actor.dataModels.vehicle = VehicleDataModel;
-    //CONFIG.Actor.dataModels["npc-vehicle"] = VehicleDataModel;
+    CONFIG.Actor.dataModels["npc-vehicle"] = VehicleDataModel; // #577: pack actors stay as npc-vehicle type
     CONFIG.Item.documentClass = SWSEItem;
     CONFIG.Token.hudClass = SWSETokenHud;
     CONFIG.Token.documentClass = SWSETokenDocument;
@@ -95,7 +97,10 @@ Hooks.once('init', async function () {
         // Must match the Actor types declared in template.json: character, computer, vehicle.
         // "computer" was missing, so computer actors silently fell back to the core sheet even
         // though SWSEActorSheet#template resolves them to computer-sheet.hbs.
-        types: ["character", "computer", "vehicle"],
+        // "npc" and "npc-vehicle" are used by compendium/pack actors (#577):
+        // safeUpdate's !this.pack guard prevents auto-migration of pack actors,
+        // so they stay as npc/npc-vehicle and need the SWSE sheet registered.
+        types: ["character", "computer", "vehicle", "npc", "npc-vehicle"],
         makeDefault: true
     });
     foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, "swse", SWSEItemSheet, {
@@ -193,6 +198,38 @@ Hooks.once("ready", () => {
     });
 });
 
+
+Hooks.once("ready", () => {
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+
+    const btn = document.createElement("button");
+    btn.id = "swse-fullscreen-btn";
+    btn.setAttribute("aria-label", "Vollbild umschalten");
+    btn.setAttribute("title", "Vollbild");
+    btn.innerHTML = '<i class="fas fa-expand"></i>';
+
+    btn.addEventListener("click", () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+        const icon = btn.querySelector("i");
+        if (!icon) return;
+        if (document.fullscreenElement) {
+            icon.className = "fas fa-compress";
+            btn.setAttribute("aria-label", "Vollbild beenden");
+        } else {
+            icon.className = "fas fa-expand";
+            btn.setAttribute("aria-label", "Vollbild umschalten");
+        }
+    });
+
+    document.body.appendChild(btn);
+});
 
 function deleteActorsByName(name){
     game.actors.filter(actor => actor.name === name).forEach(actor => actor.delete())

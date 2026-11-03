@@ -5,11 +5,40 @@ const fields = foundry.data.fields;
 
 export class AbilityFields {
     static migrateData(source) {
-        function coerceOldAttributes(attributes) {
+        function parseManual(val) {
+            if(val === null || val === undefined || val === "-") return null;
+            const n = Number(val);
+            return isNaN(n) ? null : n;
+        }
 
-            for (let [key, value] of Object.entries(attributes)) {
-                if(value.manual === "-"){
-                    value.manual = null;
+        // The old schema stored `manual: 10` as a *number* literal as the
+        // template default.  User form input always produced *strings* ("10").
+        // When a compendium actor had its real stat in `base` (e.g. 14) and the
+        // untouched template default of 10 in `manual`, the old migration code
+        // blindly set base = manualNum = 10, wiping the real value (#575/#576).
+        //
+        // Fix: if manual is the old numeric default AND base already carries a
+        // different real value, keep base and just clear manual.
+        // User-entered "10" (string) still converts to 10 normally via parseManual.
+        const OLD_MANUAL_DEFAULT = 10; // number, not string — the schema initial
+
+        function shouldPreserveBase(ability, manualNum) {
+            if (ability.manual !== OLD_MANUAL_DEFAULT) return false; // not the old default
+            const baseNum = (ability.base !== null && ability.base !== undefined)
+                ? Number(ability.base) : null;
+            return baseNum !== null && baseNum !== OLD_MANUAL_DEFAULT;
+        }
+
+        function coerceOldAttributes(attributes) {
+            for (let [key, ability] of Object.entries(attributes)) {
+                const manualNum = parseManual(ability.manual);
+                if(manualNum !== null) {
+                    if (!shouldPreserveBase(ability, manualNum)) {
+                        ability.base = manualNum;
+                    }
+                    ability.manual = null;
+                } else {
+                    ability.manual = null;
                 }
             }
             return attributes;
@@ -18,6 +47,20 @@ export class AbilityFields {
         if(!source.abilities && source.attributes){
             source.abilities = coerceOldAttributes(source.attributes);
             delete source.attributes;
+        }
+
+        if(source.abilities) {
+            for(const ability of Object.values(source.abilities)) {
+                const manualNum = parseManual(ability.manual);
+                if(manualNum !== null) {
+                    if (!shouldPreserveBase(ability, manualNum)) {
+                        ability.base = manualNum;
+                    }
+                    ability.manual = null;
+                } else if(ability.manual !== null && ability.manual !== undefined) {
+                    ability.manual = null;
+                }
+            }
         }
     }
 

@@ -74,6 +74,9 @@ export class HealthFunctions {
         system.health.max = (Number.isFinite(derivedMax) && derivedMax > 0) ? derivedMax : storedMax;
         system.health.multipliers = multipliers;
         system.health.override = actor.system.health.override;
+        system.health.pct = system.health.max > 0
+            ? Math.min(100, Math.max(0, Math.round(system.health.value / system.health.max * 100)))
+            : 0;
     }
 
     extractTraitValues(traitAttributes, healthBonuses) {

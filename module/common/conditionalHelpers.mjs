@@ -138,3 +138,21 @@ export function applyDamageReduction(totalDamage, damageTypes, damageReductions,
     }
     return Math.max(totalDamage, 0);
 }
+
+/**
+ * Condition track consequences of one attack's damage (Core Rulebook p.146).
+ *  - damage that equals or exceeds the damage threshold moves -1 step
+ *  - damage that reduces a creature to 0 hit points moves -5 steps and knocks it unconscious
+ *  - 0 hit points from damage that also equals or exceeds the threshold kills it (destroys a droid, object or vehicle)
+ * @returns {{steps: number, reducedToZero: boolean, killed: boolean, thresholdReached: boolean}}
+ */
+export function resolveThresholdEffect({damage, currentHealth, threshold}) {
+    const thresholdReached = damage > 0 && damage >= threshold;
+    const reducedToZero = damage > 0 && currentHealth - damage <= 0;
+    return {
+        steps: reducedToZero ? 5 : (thresholdReached ? 1 : 0),
+        reducedToZero,
+        killed: reducedToZero && thresholdReached,
+        thresholdReached
+    };
+}

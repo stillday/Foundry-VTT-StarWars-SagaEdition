@@ -1,4 +1,7 @@
 {
+  "SWSE.Wiki.TooltipLore": "Jedipedia (German Star Wars lore encyclopedia, no Saga Edition rules)",
+  "SWSE.Wiki.Link": "Wiki",
+  "SWSE.Wiki.Tooltip": "SWSE fan wiki (English, secondary source - the Core Rulebook wins on any conflict)",
   "EFFECT.StatusCondition-1": "Condition -1",
   "EFFECT.StatusCondition-2": "Condition -2",
   "EFFECT.StatusCondition-5": "Condition -5",

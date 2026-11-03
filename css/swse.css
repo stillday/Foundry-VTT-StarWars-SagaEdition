@@ -1,3 +1,4 @@
+@charset "UTF-8";
 @import url("https://fonts.googleapis.com/css2?family=Martel:wght@400;800&family=Roboto:wght@300;400;500&display=swap");
 :root {
   --color-background: #e8e8e8;
@@ -1349,6 +1350,99 @@
 .swse .disabled {
   cursor: pointer;
 }
+.swse .hp-bar-container {
+  margin: 4px 0 6px;
+}
+.swse .hp-fraction {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-foreground);
+  margin-bottom: 4px;
+  display: block;
+}
+.swse .hp-bar-track {
+  height: 10px;
+  background: var(--color-background);
+  border: 1px solid var(--color-foreground);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.swse .hp-bar {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 5px;
+  background: hsl(calc(var(--hp-pct) * 1.2deg), 70%, 45%);
+  -webkit-transition: width 0.3s ease;
+  transition: width 0.3s ease;
+}
+.swse .hp-adjust-row {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: horizontal;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  gap: 4px;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  margin: 4px 0;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+}
+.swse .hp-adjust-row .hp-adjust-amount {
+  width: 70px !important;
+  min-width: 60px;
+  min-height: 28px;
+  -ms-flex-negative: 0;
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+.swse .hp-btn {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  flex: 1;
+  min-height: 28px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 2px solid var(--color-foreground);
+  border-radius: 5px;
+  cursor: pointer;
+  background: var(--color-midground);
+  color: var(--color-foreground);
+  padding: 2px 4px;
+  line-height: 1.2;
+}
+.swse .hp-btn:hover {
+  background: var(--color-foreground);
+  color: var(--color-background);
+}
+.swse .hp-btn.hp-btn--damage {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+.swse .hp-btn.hp-btn--damage:hover {
+  background: #c0392b;
+  color: #fff;
+}
+.swse .hp-btn.hp-btn--heal {
+  border-color: #27ae60;
+  color: #27ae60;
+}
+.swse .hp-btn.hp-btn--heal:hover {
+  background: #27ae60;
+  color: #fff;
+}
+.swse .hp-btn.hp-btn--second-wind {
+  border-color: #2980b9;
+  color: #2980b9;
+}
+.swse .hp-btn.hp-btn--second-wind:hover {
+  background: #2980b9;
+  color: #fff;
+}
 .swse .web-viewer {
   -ms-flex-line-pack: stretch;
   align-content: stretch;
@@ -1593,4 +1687,132 @@
 .swse .editor > a.editor-edit::after {
   content: "Edit";
   font-weight: bold;
+}
+
+/* Mobile / tablet responsive overrides.  pointer:coarse only — desktop unchanged. */
+#swse-fullscreen-btn {
+  display: none;
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  font-size: 18px;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#swse-fullscreen-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@media (pointer: coarse) {
+  #swse-fullscreen-btn {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+  }
+  .window-app.swse {
+    left: env(safe-area-inset-left, 0px) !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    border-radius: 0 !important;
+    -webkit-box-shadow: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  .window-app.swse .tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -ms-flex-wrap: nowrap;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .window-app.swse .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .window-app.swse .tabs .item {
+    -ms-flex-negative: 0;
+    flex-shrink: 0;
+    min-height: 44px;
+    display: -webkit-inline-box;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+  .window-app.swse .window-header a[data-action],
+  .window-app.swse .window-header button {
+    min-width: 44px;
+    min-height: 30px;
+    display: -webkit-inline-box;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+  }
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) {
+    -ms-flex-wrap: wrap;
+    flex-wrap: wrap;
+  }
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .ability-scores,
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .summary-header {
+    width: 100% !important;
+    -ms-flex-preferred-size: 100%;
+    flex-basis: 100%;
+  }
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .health-block,
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .defenses-block {
+    width: 100% !important;
+  }
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .flex-col,
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) > .flex-grow {
+    -ms-flex-preferred-size: 100%;
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .swse .rollable,
+  .swse [data-action]:not(.hp-btn) {
+    min-height: 36px;
+  }
+  .swse .hp-btn {
+    min-height: 36px;
+    min-width: 70px;
+  }
+  .swse input[type=number],
+  .swse input[type=text],
+  .swse select {
+    min-height: 36px;
+  }
+  .window-app.swse .window-content {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

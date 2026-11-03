@@ -32,7 +32,7 @@ import {generateAction} from "../action/generate-action.mjs";
 import {ActorAmmunitionDelegate} from "../item/ammunition/ammunitionDelegate.mjs";
 import {WeightDelegate} from "./weightDelegate.mjs";
 import {getGridSizeFromSize} from "./size.mjs";
-import {applyDamageReduction, bypassShields, hasDamageType, resolveDamageTypes} from "../common/conditionalHelpers.mjs";
+import {applyDamageReduction, bypassShields, hasDamageType, resolveDamageTypes, resolveThresholdEffect} from "../common/conditionalHelpers.mjs";
 import {depthMerge, titleCase} from "../common/helpers.mjs";
 import {CrewDelegate} from "./crewDelegate.mjs";
 
@@ -1491,7 +1491,7 @@ class SWSEActor extends Actor {
                     conditionReduction = Math.max(conditionReduction, 5);
                     resultFlavor += "The Ion Damage reduced hitpoints to 0 and has caused them to become helpless. "
                     reducedToZero = true;
-                } else if(totalDamage > damageThreshhold){
+                } else if(totalDamage >= damageThreshhold){
                     conditionReduction = Math.max(conditionReduction, 2);
                     resultFlavor += "An additional step was taken down the condition track due to Ion Damage. "
                 }
@@ -1505,7 +1505,7 @@ class SWSEActor extends Actor {
                     conditionReduction = Math.max(conditionReduction, 5);
                     resultFlavor += "The Stun Damage reduced hitpoints to 0 and has caused them to become helpless. "
                     reducedToZero = true;
-                } else if(totalDamage > damageThreshhold){
+                } else if(totalDamage >= damageThreshhold){
                     conditionReduction = Math.max(conditionReduction, 2);
                     resultFlavor += "An additional step was taken down the condition track due to Stun Damage. "
                 }
@@ -1514,9 +1514,21 @@ class SWSEActor extends Actor {
             }
         }
 
+        // Core Rulebook p.146 (see resolveThresholdEffect). Ion and Stun were resolved above, every other
+        // kind of damage that drops the target to 0 hit points is resolved here.
+        const thresholdEffect = resolveThresholdEffect({damage: totalDamage, currentHealth, threshold: damageThreshhold});
+        if (!reducedToZero && thresholdEffect.reducedToZero) {
+            conditionReduction = Math.max(conditionReduction, 5);
+            reducedToZero = true;
+            resultFlavor += thresholdEffect.killed
+                ? "The damage reduced hitpoints to 0 and equals or exceeds the damage threshold: killed (a droid, object or vehicle is destroyed). "
+                : "The damage reduced hitpoints to 0: moved -5 steps on the condition track and unconscious. ";
+        }
+
         let reducedCondition = "";
         if (options.affectDamageThreshold) {
-            if (totalDamage > damageThreshhold || reducedToZero) {
+            // Core Rulebook p.146: damage that "equals or exceeds" the damage threshold moves -1 step.
+            if (thresholdEffect.thresholdReached || reducedToZero) {
                 reducedCondition = await this.reduceCondition(conditionReduction)
             }
         }

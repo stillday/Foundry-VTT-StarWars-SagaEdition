@@ -219,7 +219,13 @@ export function generateSkills(actor, options = {}) {
                 }
             }
 
-            skill.isClass = resSkill === 'Use the Force' ? actor.isForceSensitive : classSkills.has(key)
+            // #568: homebrew classes (e.g. DarthAuthor's) may not define `classSkill` changes,
+            // leaving classSkills empty even though the actor has class levels.
+            // In that case treat all skills as class skills rather than blocking training.
+            const noClassSkillsFromData = classSkills.size === 0 && actor.itemTypes.class.length > 0;
+            skill.isClass = resSkill === 'Use the Force' ? actor.isForceSensitive
+                : noClassSkillsFromData ? true
+                : classSkills.has(key)
 
             let applicableRerolls = reRollSkills.filter(reroll => isRerollApplicable(toStringValue(reroll.value).split(":")[0], key, skill.attribute))
 
@@ -283,7 +289,10 @@ export function generateSkills(actor, options = {}) {
 
 
 
-            if (classSkills.size === 0 && skill.trained) {
+            // Only reset trained skills when classSkills is empty AND the actor truly has
+            // no class items — not when a homebrew class simply doesn't register classSkill
+            // changes (#568).  `noClassSkillsFromData` captures the homebrew case above.
+            if (classSkills.size === 0 && skill.trained && actor.itemTypes.class.length === 0) {
                 actor._pendingUpdates[`system.skills.${key}.trained`] = false
                 //data[`system.skills.${key}.trained`] = false;
             }

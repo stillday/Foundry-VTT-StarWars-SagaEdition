@@ -22,6 +22,7 @@ import {onAmmunition} from "../item/ammunition/ammunitionDelegate.mjs";
 import {makeAttack} from "./attack/attackDelegate.mjs";
 import {Attack} from "./attack/attack.mjs";
 import {buildRollContent} from "../common/chatMessageHelpers.mjs";
+import {firstFreeSecondWind, meetsSecondWindThreshold, secondWindHealing} from "../common/second-wind.mjs";
 
 
 // noinspection JSClosureCompilerSyntax
@@ -292,6 +293,9 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('[data-action="increase-quantity"]').click(this._onIncreaseItemQuantity.bind(this));
         html.find('[data-action="toggle-use"]').click(this._onToggleUse.bind(this));
         html.find('[data-action="toggle-second-wind"]').click(this._onToggleSecondWind.bind(this));
+        html.find('[data-action="apply-damage"]').click(this._onApplyDamage.bind(this));
+        html.find('[data-action="catch-second-wind"]').click(this._onCatchSecondWind.bind(this));
+        html.find('[data-action="apply-heal"]').click(this._onApplyHeal.bind(this));
         html.find('[data-action="create"]').click(this._onCreateNewItem.bind(this));
         html.find('[data-action="quickCreate"]').on("keyup", this._onQuickCreate.bind(this));
         html.find('[data-action="to-chat"]').click(this._onToChat.bind(this));
@@ -648,6 +652,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         dragData.itemId = elem.dataset.itemId;
         dragData.providerId = elem.dataset.providerId;
         dragData.actorId = this.actor.id;
+        dragData.actorUUID = this.actor.uuid; // #554: makeAttack/createAttackMacro need UUID for fromUuidSync()
         dragData.actorName = this.actor.name;
         dragData.attacks = elem.dataset.attacks ? JSON.parse(unescape(elem.dataset.attacks)) : [];
         if (this.actor.isToken) {
@@ -1470,6 +1475,58 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         //const li = event.currentTarget.closest(".item");
         // const item = this.actor.items.get(li.dataset.itemId);
         // item.toggleUse(key, toggle)
+    }
+
+    /** Catch a second wind (Core Rulebook p.146): checks the half-HP condition and a free daily use, heals, spends a slot. */
+    async _onCatchSecondWind(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const actor = this.actor;
+        const health = actor.system.health;
+        if (!meetsSecondWindThreshold(health.value, health.max)) {
+            ui.notifications.warn(`${actor.name}: Second Wind only works at half hit points or less (${health.value} / ${health.max}).`);
+            return;
+        }
+        const slot = firstFreeSecondWind(actor.system.secondWinds ?? 0, actor.system.toggles?.secondWinds);
+        if (slot < 0) {
+            ui.notifications.warn(`${actor.name} has no Second Wind left today.`);
+            return;
+        }
+        const heal = secondWindHealing(health.max, actor.system.abilities?.con?.skip ? null : actor.system.abilities?.con?.value);
+        const newValue = Math.min(health.max, health.value + heal);
+        await actor.safeUpdate({
+            "system.health.value": newValue,
+            [`system.toggles.secondWinds.${slot}`]: true
+        });
+        await ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({actor}),
+            content: `${actor.name} catches a second wind and heals ${newValue - health.value} hit points.`
+        });
+    }
+
+    async _onApplyDamage(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = event.currentTarget.closest('.hp-adjust-row');
+        const amountInput = row?.querySelector('.hp-adjust-amount');
+        const amount = parseInt(amountInput?.value) || 0;
+        if (amount <= 0) return;
+        const newValue = Math.max(0, this.actor.system.health.value - amount);
+        await this.actor.update({"system.health.value": newValue});
+        if (amountInput) amountInput.value = '';
+    }
+
+    async _onApplyHeal(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const row = event.currentTarget.closest('.hp-adjust-row');
+        const amountInput = row?.querySelector('.hp-adjust-amount');
+        const amount = parseInt(amountInput?.value) || 0;
+        if (amount <= 0) return;
+        const max = this.actor.system.health.max;
+        const newValue = Math.min(max, this.actor.system.health.value + amount);
+        await this.actor.update({"system.health.value": newValue});
+        if (amountInput) amountInput.value = '';
     }
 
     /**

@@ -101,3 +101,44 @@ test('Ion and Stun are independent descriptors on the same weapon', () => {
     expect(hasDamageType(combined, "Energy (Ion)")).to.equal(true);
     expect(hasDamageType(combined, "Energy (Stun)")).to.equal(true);
 });
+
+import {resolveThresholdEffect} from '../module/common/conditionalHelpers.mjs';
+
+// Core Rulebook p.146 (PDF 154): "When a single attack made against you deals damage that equals or
+// exceeds your damage threshold, but not enough damage to drop you to 0 hit points, you move -1 step
+// along the condition track." / "A creature reduced to 0 hit points moves -5 steps ... and falls unconscious"
+// / "if the damage that reduced the creature to 0 hit points equals or exceeds its damage threshold,
+// the creature is killed instead."
+test('damage below the damage threshold has no condition track effect', () => {
+    expect(resolveThresholdEffect({damage: 12, currentHealth: 30, threshold: 13}))
+        .to.deep.equal({steps: 0, reducedToZero: false, killed: false, thresholdReached: false});
+});
+
+test('damage exactly equal to the damage threshold moves -1 step (equals or exceeds)', () => {
+    const r = resolveThresholdEffect({damage: 13, currentHealth: 30, threshold: 13});
+    expect(r.steps).to.equal(1);
+    expect(r.thresholdReached).to.equal(true);
+    expect(r.killed).to.equal(false);
+});
+
+test('damage above the threshold moves -1 step', () => {
+    expect(resolveThresholdEffect({damage: 20, currentHealth: 30, threshold: 13}).steps).to.equal(1);
+});
+
+test('reducing to 0 hit points below the threshold moves -5 steps and does not kill', () => {
+    const r = resolveThresholdEffect({damage: 10, currentHealth: 10, threshold: 13});
+    expect(r.steps).to.equal(5);
+    expect(r.reducedToZero).to.equal(true);
+    expect(r.killed).to.equal(false);
+});
+
+test('reducing to 0 hit points with damage at or above the threshold kills', () => {
+    const r = resolveThresholdEffect({damage: 13, currentHealth: 8, threshold: 13});
+    expect(r.reducedToZero).to.equal(true);
+    expect(r.killed).to.equal(true);
+    expect(r.steps).to.equal(5);
+});
+
+test('no damage has no effect', () => {
+    expect(resolveThresholdEffect({damage: 0, currentHealth: 0, threshold: 0}).steps).to.equal(0);
+});

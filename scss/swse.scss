@@ -25,6 +25,7 @@
   @import 'components/vehicle';
   @import 'components/compendium';
   @import 'components/change';
+  @import 'components/health';
   @import 'components/web';
 }
 @import 'components/chat';
@@ -32,3 +33,6 @@
 
 /* Undo v14 core CSS regressions.  Must come last and must stay outside `.swse { }`. */
 @import 'components/v14-overrides';
+
+/* Mobile / tablet responsive overrides.  pointer:coarse only — desktop unchanged. */
+@import 'components/mobile';

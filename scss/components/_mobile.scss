@@ -1,0 +1,154 @@
+// ===================================================================
+// SWSE Mobile & Tablet Responsive Overrides
+// (pointer: coarse) = touch-primary devices (Android, iOS)
+//
+// Rules:
+//   - Desktop (pointer: fine) is never touched
+//   - !important only for Foundry inline-style overrides (position/size)
+//   - No duplicate rules — only mobile-specific adjustments here
+// ===================================================================
+
+// -------------------------------------------------------------------
+// Fullscreen button – hidden on desktop, flex on touch
+// -------------------------------------------------------------------
+#swse-fullscreen-btn {
+  display: none;
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.75);
+  color: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  font-size: 18px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+@media (pointer: coarse) {
+  // -----------------------------------------------------------------
+  // Show fullscreen button
+  // -----------------------------------------------------------------
+  #swse-fullscreen-btn {
+    display: flex;
+  }
+
+  // -----------------------------------------------------------------
+  // Edge-to-edge SWSE windows
+  //   Foundry sets left/top/width/height as inline styles;
+  //   !important is required to override them.
+  // -----------------------------------------------------------------
+  .window-app.swse {
+    left: env(safe-area-inset-left, 0px) !important;
+    top: env(safe-area-inset-top, 0px) !important;
+    width: calc(100% - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) !important;
+    height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+
+  // -----------------------------------------------------------------
+  // Tab bar: horizontal scroll (hides the native scrollbar)
+  // -----------------------------------------------------------------
+  .window-app.swse .tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    .item {
+      flex-shrink: 0;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+  }
+
+  // Window header close/control buttons: 44px touch targets
+  .window-app.swse .window-header {
+    a[data-action],
+    button {
+      min-width: 44px;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // Sheet inner content: stack flex-rows that overflow
+  //   Targets two-column layouts inside SWSE sheets.
+  //   HP adjust row and other intentionally-horizontal rows stay put.
+  // -----------------------------------------------------------------
+  .swse .tab .flex-row:not(.hp-adjust-row):not(.dialog-buttons) {
+    flex-wrap: wrap;
+
+    > .ability-scores,
+    > .summary-header {
+      width: 100% !important;
+      flex-basis: 100%;
+    }
+
+    > .health-block,
+    > .defenses-block {
+      width: 100% !important;
+    }
+
+    // Two-column sections (weapons/skills split, etc.)
+    > .flex-col,
+    > .flex-grow {
+      flex-basis: 100%;
+      min-width: 0;
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // Minimum touch targets for interactive elements
+  // -----------------------------------------------------------------
+  .swse .rollable,
+  .swse [data-action]:not(.hp-btn) {
+    min-height: 36px;
+  }
+
+  // HP bar buttons: keep compact
+  .swse .hp-btn {
+    min-height: 36px;
+    min-width: 70px;
+  }
+
+  // Input fields: comfortable for fat fingers
+  .swse input[type="number"],
+  .swse input[type="text"],
+  .swse select {
+    min-height: 36px;
+  }
+
+  // -----------------------------------------------------------------
+  // Safe-area bottom padding on window content (Android gesture nav)
+  // -----------------------------------------------------------------
+  .window-app.swse .window-content {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

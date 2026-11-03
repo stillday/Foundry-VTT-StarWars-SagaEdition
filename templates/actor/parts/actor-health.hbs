@@ -1,6 +1,30 @@
 {{!-- Health Block --}}
 <div class="health-block panel flex flex-col">
     <h1 class="top-label label resource-label">Hit Points</h1>
+
+    {{!-- HP Bar + Fraction Display --}}
+    <div class="hp-bar-container">
+        <span class="hp-fraction" aria-label="Hit Points: {{actor.health.value}} / {{actor.health.max}}">{{actor.health.value}} / {{actor.health.max}}</span>
+        <div class="hp-bar-track" aria-hidden="true">
+            <div class="hp-bar" style="width: {{actor.system.health.pct}}%; --hp-pct: {{actor.system.health.pct}}"></div>
+        </div>
+    </div>
+
+    {{!-- Damage / Heal quick-adjust --}}
+    <div class="hp-adjust-row">
+        <input class="hp-adjust-amount" type="number" min="1" placeholder="Menge"
+               aria-label="Schaden- oder Heilungsmenge" data-dtype="Number"/>
+        <button type="button" class="hp-btn hp-btn--damage" data-action="apply-damage"
+                aria-label="Schaden anwenden">Schaden</button>
+        <button type="button" class="hp-btn hp-btn--heal" data-action="apply-heal"
+                aria-label="Heilung anwenden">Heilen</button>
+        {{#unless disableSecondWind}}
+        <button type="button" class="hp-btn hp-btn--second-wind" data-action="catch-second-wind"
+                title="Second Wind: at half hit points or less, heals 1/4 of max HP or your Constitution score (once per day, once per encounter)"
+                aria-label="Second Wind">Second Wind</button>
+        {{/unless}}
+    </div>
+
     <div class="flex-row">
         <div class="labeled-input numeric-override medium" data-override="{{actor.health.override}}" data-context="health"
              data-override-name="Total Health" data-override-key="system.health.override">

@@ -1,4 +1,7 @@
 {
+  "SWSE.Wiki.TooltipLore": "Jedipedia (deutsches Star-Wars-Lexikon, Hintergrund ohne Saga-Edition-Regeln)",
+  "SWSE.Wiki.Link": "Wiki",
+  "SWSE.Wiki.Tooltip": "SWSE-Fanwiki (nur Englisch; Zweitquelle - im Zweifel gilt das Regelbuch)",
   "EFFECT.StatusCondition-1": "Condition -1",
   "EFFECT.StatusCondition-2": "Condition -2",
   "EFFECT.StatusCondition-5": "Condition -5",
