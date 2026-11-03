@@ -1538,7 +1538,7 @@ class SWSEActor extends Actor {
             totalDamage = 0;
         }
 
-        const content = `${this.name} has has taken ${totalDamage} damage.  ${resultFlavor}  ${reducedCondition}`
+        const content = `${this.name} has taken ${totalDamage} damage.  ${resultFlavor}  ${reducedCondition}`
 
         let flags = {};
         flags.swse = {};
@@ -1567,7 +1567,7 @@ class SWSEActor extends Actor {
         const healAmount = Math.min(proposedHealAmount, maxHealAmount);
         update[`system.health.value`] = this.system.health.value + healAmount;
 
-        const content = `${this.name} has has healed ${healAmount} damage` + (maxHealAmount < proposedHealAmount ? " reaching max health." : ".")
+        const content = `${this.name} has healed ${healAmount} damage` + (maxHealAmount < proposedHealAmount ? " reaching max health." : ".")
 
         let flags = {};
         flags.swse = {};
