@@ -1108,7 +1108,88 @@
   background: var(--color-foreground);
 }
 .swse .ammunition-block {
-  width: 100px;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 100px;
+  max-width: 100%;
+}
+.swse .ammunition-block .ammo-status {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  justify-content: space-between;
+  -webkit-box-align: baseline;
+  -ms-flex-align: baseline;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: bold;
+}
+.swse .ammunition-block .ammo-controls {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.swse .ammunition-block .ammo-btn {
+  -webkit-box-flex: 0;
+  -ms-flex: 0 0 auto;
+  flex: 0 0 auto;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  margin: 0;
+  line-height: 1;
+  font-size: var(--font-size-14, 14px);
+  white-space: nowrap;
+}
+.swse .ammunition-block .ammo-step {
+  font-size: 1.25em;
+  font-weight: bold;
+}
+.swse .ammunition-block .ammo-reload {
+  -webkit-box-flex: 1;
+  -ms-flex: 1 1 auto;
+  flex: 1 1 auto;
+}
+.swse .swse-wiki-links {
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.swse .swse-wiki-links .swse-wiki-link {
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-light-tertiary, #888);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--font-size-13, 13px);
+  white-space: nowrap;
+}
+.swse .swse-wiki-links .swse-wiki-link:hover, .swse .swse-wiki-links .swse-wiki-link:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
 }
 .swse .attribute {
   display: grid;

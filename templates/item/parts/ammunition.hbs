@@ -1,14 +1,16 @@
 {{#if ammunition}}
     {{#each ammunition.current as |ammo id|}}
         <div class="ammunition-block">
-            {{ammo.type}}
-            {{ammo.current}}/{{ammo.capacity}}
-            <div class="flex-row">
-                <button type="button" data-action="ammunition-increase" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}">+</button>
-                <button type="button" data-action="ammunition-decrease" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}">-</button>
+            <div class="ammo-status">
+                <span class="ammo-type">{{ammo.type}}</span>
+                <span class="ammo-count">{{ammo.current}}/{{ammo.capacity}}</span>
             </div>
-            <button type="button" data-action="ammunition-reload" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}">Reload</button>
-            <button type="button" data-action="ammunition-eject" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}">Eject Ammunition</button>
+            <div class="ammo-controls">
+                <button type="button" class="ammo-btn ammo-step" data-action="ammunition-decrease" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}" title="{{localize "SWSE.UI.AmmoDecrease"}}" aria-label="{{localize "SWSE.UI.AmmoDecrease"}}">&minus;</button>
+                <button type="button" class="ammo-btn ammo-step" data-action="ammunition-increase" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}" title="{{localize "SWSE.UI.AmmoIncrease"}}" aria-label="{{localize "SWSE.UI.AmmoIncrease"}}">+</button>
+                <button type="button" class="ammo-btn ammo-reload" data-action="ammunition-reload" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}"><i class="fas fa-rotate"></i> {{localize "SWSE.UI.AmmoReload"}}</button>
+                <button type="button" class="ammo-btn ammo-eject" data-action="ammunition-eject" data-ammo-type="{{ammo.type}}" data-item-id="{{ammo.itemId}}" title="{{localize "SWSE.UI.AmmoEject"}}" aria-label="{{localize "SWSE.UI.AmmoEject"}}"><i class="fas fa-eject"></i></button>
+            </div>
             <div class="flex flex-row flex-gap-small flex-wrap">
                 {{#each ammo.queue as |item id|}}
                     <div class="queued-ammo-{{#if item.empty}}empty{{else}}full{{/if}}" data-item-id="{{item.id}}" title="{{item.name}}"></div>

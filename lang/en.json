@@ -335,5 +335,9 @@
   "SWSE.UI.DialogInsufficientAmmoTitle": "Insufficient Ammunition",
   "SWSE.UI.DialogInsufficientAmmoContent": "You do not have any {type} ammunition. Clicking \"Ignore\" will reload your weapon, but weapons with special ammunition might not work as expected.",
   "SWSE.UI.DialogNewAttribute": "New Attribute",
-  "SWSE.UI.DialogNewMode": "New Mode"
+  "SWSE.UI.DialogNewMode": "New Mode",
+  "SWSE.UI.AmmoReload": "Reload",
+  "SWSE.UI.AmmoEject": "Eject ammunition",
+  "SWSE.UI.AmmoIncrease": "Add one",
+  "SWSE.UI.AmmoDecrease": "Remove one"
 }

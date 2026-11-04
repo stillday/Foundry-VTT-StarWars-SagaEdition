@@ -1679,6 +1679,11 @@ export function toChat(content, speakerSource = undefined, flavor="", context={}
         flags: context.flags
     }
 
+    // Hand the evaluated Roll to the message: Dice So Nice (and every other module that animates
+    // dice) only reacts to ChatMessage.rolls, not to HTML that merely looks like a roll.
+    const rolls = context.rolls ?? (context.rollResult ? [context.rollResult] : undefined);
+    if (rolls?.length) messageData.rolls = rolls;
+
     let cls = getDocumentClass("ChatMessage");
 
     // v14: ChatMessage.applyRollMode was replaced by applyMode, which resolves the

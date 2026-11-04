@@ -28,27 +28,37 @@ export function wikiUrl(name, base = WIKI_BASE) {
     return base + encodeURIComponent(title).replace(/%2F/g, "/");
 }
 
-/** Add a "Wiki" link to the header of an item sheet (works for jQuery and plain element html). */
+/**
+ * Add the wiki links to an item sheet (works for jQuery and plain element html).
+ *
+ * They live in a row of real buttons right under the sheet header.  In the window header they used
+ * to be squeezed to the far right, next to the window controls, and on a phone they were just two
+ * unlabeled book icons.
+ */
 function addWikiLink(app, html) {
     const item = app?.item ?? app?.document;
     const url = wikiUrl(item?.name);
     if (!url) return;
     const root = html instanceof Element ? html : html?.[0];
-    const header = root?.querySelector?.(".window-header")
-        ?? root?.closest?.(".window-app, .application")?.querySelector(".window-header");
-    if (!header || header.querySelector(".swse-wiki-link")) return;
-    const close = header.querySelector(".close");
+    const appEl = root?.closest?.(".window-app, .application") ?? root;
+    if (!appEl || appEl.querySelector(".swse-wiki-links")) return;
+    const anchor = appEl.querySelector(".sheet-header") ?? appEl.querySelector(".window-content > *");
+    if (!anchor) return;
+
+    const row = document.createElement("div");
+    row.className = "swse-wiki-links";
     for (const wiki of WIKIS) {
         if (wiki.types && !wiki.types.includes(item.type)) continue;
         const link = document.createElement("a");
-        link.className = "swse-wiki-link header-button";
+        link.className = "swse-wiki-link";
         link.href = wikiUrl(item.name, wiki.base);
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.title = game.i18n.localize(wiki.lore ? "SWSE.Wiki.TooltipLore" : "SWSE.Wiki.Tooltip");
         link.innerHTML = `<i class="fas fa-book-open"></i> ${wiki.lore ? "" : game.i18n.localize("SWSE.Wiki.Link") + " "}${wiki.label}`;
-        header.insertBefore(link, close ?? null);
+        row.append(link);
     }
+    anchor.after(row);
 }
 
 export const WIKI_HOOKS = ["renderSWSEItemSheet", "renderItemSheetV2"];

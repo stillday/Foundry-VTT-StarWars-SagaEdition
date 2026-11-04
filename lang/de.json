@@ -335,5 +335,9 @@
   "SWSE.UI.DialogInsufficientAmmoTitle": "Unzureichende Munition",
   "SWSE.UI.DialogInsufficientAmmoContent": "Du hast keine {type}-Munition. Klicke auf \"Ignorieren\", um die Waffe trotzdem zu laden, aber Waffen mit spezieller Munition funktionieren möglicherweise nicht wie erwartet.",
   "SWSE.UI.DialogNewAttribute": "Neues Attribut",
-  "SWSE.UI.DialogNewMode": "Neuer Modus"
+  "SWSE.UI.DialogNewMode": "Neuer Modus",
+  "SWSE.UI.AmmoReload": "Nachladen",
+  "SWSE.UI.AmmoEject": "Munition auswerfen",
+  "SWSE.UI.AmmoIncrease": "Eins hinzufügen",
+  "SWSE.UI.AmmoDecrease": "Eins entfernen"
 }
