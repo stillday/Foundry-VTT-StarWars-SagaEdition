@@ -72,5 +72,8 @@
   "SWSE.AbilityShortCon": "Con",
   "SWSE.AbilityShortInt": "Int",
   "SWSE.AbilityShortWis": "Wis",
-  "SWSE.AbilityShortCha": "Cha"
+  "SWSE.AbilityShortCha": "Cha",
+  "SWSE.Condition.Persistent": "Anhaltender Zustand",
+  "SWSE.Condition.PersistentTooltip": "Anhaltende Zustände (Gift, Krankheit …) blockieren die Erholen-Aktion und natürliche Heilung, bis ihre Bedingung erfüllt ist (Grundregelwerk S. 149).",
+  "SWSE.Condition.PersistentBlocksRecover": "Erholen ist gesperrt: erst muss der anhaltende Zustand beseitigt werden."
 }

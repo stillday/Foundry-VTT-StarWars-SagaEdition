@@ -10,6 +10,7 @@ import {
     toChat,
     unique
 } from "../common/util.mjs";
+import {canRecover, PERSISTENT_FLAG} from "../common/persistent-condition.mjs";
 import {characterActorTypes, vehicleActorTypes} from "../common/constants.mjs";
 import {addSubCredits, transferCredits} from "./credits.mjs";
 import {SWSECompendiumDirectory} from "../compendium/compendium-directory.mjs";
@@ -294,6 +295,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         html.find('[data-action="toggle-use"]').click(this._onToggleUse.bind(this));
         html.find('[data-action="toggle-second-wind"]').click(this._onToggleSecondWind.bind(this));
         html.find('[data-action="apply-damage"]').click(this._onApplyDamage.bind(this));
+        html.find('[data-action="toggle-persistent"]').on("change", ev => this.object.setFlag("swse", PERSISTENT_FLAG, ev.currentTarget.checked));
         html.find('[data-action="catch-second-wind"]').click(this._onCatchSecondWind.bind(this));
         html.find('[data-action="apply-heal"]').click(this._onApplyHeal.bind(this));
         html.find('[data-action="create"]').click(this._onCreateNewItem.bind(this));
@@ -697,6 +699,10 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
     }
 
     async recover(event, sheet) {
+        if (!canRecover(this.object.getFlag("swse", PERSISTENT_FLAG))) {
+            ui.notifications.warn(game.i18n.localize("SWSE.Condition.PersistentBlocksRecover"));
+            return;
+        }
         let actions = this.object.recoveryActions + 1;
         if(actions === this.object.totalRecoveryActions){
             actions = 0;

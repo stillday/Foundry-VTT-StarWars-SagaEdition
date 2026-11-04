@@ -1,6 +1,7 @@
 {{!-- Condition Block --}}
 <div class="condition-block panel flex flex-col">
     <h1 class="resource-label">Condition{{#if actor.condition}} <button type="button" data-action="recover">Recover {{actor.recoveryActions}}/{{actor.totalRecoveryActions}}</button>{{/if}}</h1>
+    <label class="persistent-condition" title="{{localize 'SWSE.Condition.PersistentTooltip'}}"><input type="checkbox" data-action="toggle-persistent" {{#if actor.flags.swse.persistentCondition}}checked{{/if}}> {{localize 'SWSE.Condition.Persistent'}}</label>
     <table>
         <thead>
         <tr>

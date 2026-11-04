@@ -72,5 +72,8 @@
   "SWSE.AbilityShortCon": "Con",
   "SWSE.AbilityShortInt": "Int",
   "SWSE.AbilityShortWis": "Wis",
-  "SWSE.AbilityShortCha": "Cha"
+  "SWSE.AbilityShortCha": "Cha",
+  "SWSE.Condition.Persistent": "Persistent condition",
+  "SWSE.Condition.PersistentTooltip": "Persistent conditions (poison, disease…) block the Recover action and natural healing until their requirements are met (Core Rulebook p.149).",
+  "SWSE.Condition.PersistentBlocksRecover": "Recover is blocked: the persistent condition must be removed first."
 }
