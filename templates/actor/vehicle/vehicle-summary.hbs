@@ -1,33 +1,33 @@
 <div class="summary-header swse">
     <div class="name large labeled-input">
-        <label for="name" class="text">Vehicle Name</label>
+        <label for="name" class="text">{{localize "SWSE.UI.LabelVehicleName"}}</label>
         <input class="input" name="name" id="name" type="text" value="{{actor.name}}" placeholder=""/>
     </div>
 
     <div class="type large labeled-input">
-        <label for="type" class="text">Vehicle Type</label>
+        <label for="type" class="text">{{localize "SWSE.UI.LabelVehicleType"}}</label>
         <input class="input" id="type" type="text" name="system.subType"  value="{{actor.system.subType}}" placeholder=""/>
     </div>
 
     <div class="captain medium labeled-input">
-        <label for="captain" class="text">Captain</label>
+        <label for="captain" class="text">{{localize "SWSE.UI.LabelCaptain"}}</label>
         <input class="input" name="system.captain" id="captain" type="text" value="{{actor.system.captain}}"
                placeholder=""/>
     </div>
 
     <div class="crew medium labeled-input">
-        <label for="crew" class="text">Crew</label>
+        <label for="crew" class="text">{{localize "SWSE.UI.LabelCrew"}}</label>
         <input class="input" id="crew" type="text" name="system.vehicle.crew" value="{{actor.system.vehicle.crew}}" placeholder=""/>
     </div>
 
     <div class="passengers medium labeled-input">
-        <label for="passengers" class="text">Passengers</label>
+        <label for="passengers" class="text">{{localize "SWSE.UI.LabelPassengers"}}</label>
         <input class="input" id="passengers" type="text" name="system.vehicle.passengers" value="{{actor.system.vehicle.passengers}}" placeholder=""/>
     </div>
 
     <div class="size medium flex-row">
         <div class="labeled-input">
-            <label for="size" class="text">Size</label>
+            <label for="size" class="text">{{localize "SWSE.UI.LabelSize"}}</label>
             <input class="left-input" id="size" type="text" value="{{actor.size.name}}" placeholder="" disabled/>
         </div>
         <div class="divider"></div>
@@ -38,35 +38,35 @@
     </div>
     <div class="cargo medium flex-row">
         <div class="labeled-input">
-            <label for="cargo" class="text">Cargo</label>
+            <label for="cargo" class="text">{{localize "SWSE.UI.LabelCargo"}}</label>
             <input class="left-input" id="cargo" type="text" name="system.vehicle.cargoCapacity.value"
                    value="{{ actor.system.vehicle.cargoCapacity.value}}" placeholder=""/>
         </div>
         <div class="divider"></div>
         <div class="labeled-input">
-            <label for="cargoCapacity" class="text">Capacity</label>
+            <label for="cargoCapacity" class="text">{{localize "SWSE.UI.LabelCapacity"}}</label>
             <input class="right-input" id="cargoCapacity" type="text" name="system.vehicle.cargoCapacity.capacity"
                    value="{{actor.system.vehicle.cargoCapacity.capacity}}" placeholder=""/>
         </div>
     </div>
 
     <div class="consumables medium labeled-input">
-        <label for="consumables" class="text">Consumables</label>
+        <label for="consumables" class="text">{{localize "SWSE.UI.LabelConsumables"}}</label>
         {{!-- the name pointed at system.vehicle.cargoCapacity.consumables, which does not exist;
               the value was already reading the correct path. --}}
         <input class="input" id="consumables" type="text"  name="system.vehicle.consumables" value="{{actor.system.vehicle.consumables}}" placeholder=""/>
     </div>
 
     <div class="cost medium labeled-input">
-        <label for="cost" class="text">Cost</label>
+        <label for="cost" class="text">{{localize "SWSE.UI.LabelCost"}}</label>
         <input class="input" id="cost" type="text" name="system.vehicle.cost" value="{{actor.system.vehicle.cost}}" placeholder=""/>
     </div>
 
 
     <div class="size large flex-row">
         <div class="labeled-input">
-            <label for="hyperdrive" class="text">Hyperdrive</label>
-            <div class="left-input" id="hyperdrive"{{#if actor.hyperdrive.primary}} data-action="view" data-item-id="{{actor.hyperdrive.primary.id}}" {{else}} data-action="compendium" data-action-modifier="equip:installed" data-type="Item" data-filter="-type:vehicleSystem hyperdrive" {{/if}}>{{#if actor.hyperdrive.primary}}{{actor.hyperdrive.primary.hyperdrive}}{{else}}Add Drive{{/if}}</div>
+            <label for="hyperdrive" class="text">{{localize "SWSE.UI.LabelHyperdrive"}}</label>
+            <div class="left-input" id="hyperdrive"{{#if actor.hyperdrive.primary}} data-action="view" data-item-id="{{actor.hyperdrive.primary.id}}" {{else}} data-action="compendium" data-action-modifier="equip:installed" data-type="Item" data-filter="-type:vehicleSystem hyperdrive" {{/if}}>{{#if actor.hyperdrive.primary}}{{actor.hyperdrive.primary.hyperdrive}}{{else}}{{localize "SWSE.UI.BtnAddDrive"}}{{/if}}</div>
             {{#if actor.hyperdrive.primary}}
                 <div class="control-0">
                     <a class="" data-action="delete" data-item-id="{{actor.hyperdrive.primary.id}}"
@@ -77,8 +77,8 @@
         </div>
         <div class="divider"></div>
         <div class="labeled-input">
-            <label for="backupHyperdrive" class="text">Backup Hyperdrive</label>
-            <div class="right-input" id="backupHyperdrive"{{#if actor.hyperdrive.backup}} data-action="view" data-item-id="{{actor.hyperdrive.backup.id}}" {{else}} data-action="compendium" data-action-modifier="equip:installed" data-type="Item" data-filter="-type:vehicleSystem hyperdrive" {{/if}}>{{#if actor.hyperdrive.backup}}{{actor.hyperdrive.backup.hyperdrive}}{{else}}Add Drive{{/if}}</div>
+            <label for="backupHyperdrive" class="text">{{localize "SWSE.UI.LabelBackupHyperdrive"}}</label>
+            <div class="right-input" id="backupHyperdrive"{{#if actor.hyperdrive.backup}} data-action="view" data-item-id="{{actor.hyperdrive.backup.id}}" {{else}} data-action="compendium" data-action-modifier="equip:installed" data-type="Item" data-filter="-type:vehicleSystem hyperdrive" {{/if}}>{{#if actor.hyperdrive.backup}}{{actor.hyperdrive.backup.hyperdrive}}{{else}}{{localize "SWSE.UI.BtnAddDrive"}}{{/if}}</div>
             {{#if actor.hyperdrive.backup}}
                 <div class="control-0">
                     <a class="" data-action="delete" data-item-id="{{actor.hyperdrive.backup.id}}"
@@ -101,7 +101,7 @@
 
     <div class="maxVelocity medium">
         <div class="labeled-input">
-            <label for="maxVelocity" class="text">Maximum Velocity</label>
+            <label for="maxVelocity" class="text">{{localize "SWSE.UI.LabelMaxVelocity"}}</label>
             <input class="input" id="maxVelocity" type="text" name="system.vehicle.speed.maximumVelocity" value="{{actor.system.vehicle.speed.maximumVelocity}}" placeholder=""/>
             <div class="control-0">km/h</div>
         </div>
@@ -111,7 +111,7 @@
 
 
     <div class="large flex-col">
-        <div class="top-label center label">Fighting Space</div>
+        <div class="top-label center label">{{localize "SWSE.UI.LabelFightingSpace"}}</div>
         <div class="size flex-row">
             <div class="labeled-input">
                 <label for="characterScale" class="text">Character Scale</label>
@@ -132,7 +132,7 @@
 
 
     <div class="large flex-col">
-        <div class="top-label center label">Vehicle Speed</div>
+        <div class="top-label center label">{{localize "SWSE.UI.LabelVehicleSpeed"}}</div>
         <div class="flex-row">
             <div class="labeled-input">
                 <label for="speedVehicle" class="text">Starship Scale</label>

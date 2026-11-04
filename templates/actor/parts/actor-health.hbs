@@ -28,20 +28,19 @@
     <div class="flex-row">
         <div class="labeled-input numeric-override medium" data-override="{{actor.health.override}}" data-context="health"
              data-override-name="Total Health" data-override-key="system.health.override">
-            <label for="maxHealth" class="text">Total</label>
+            <label for="maxHealth" class="text">{{localize "SWSE.UI.LabelTotal"}}</label>
             <input class="left-input" id="maxHealth" type="text"
                    value="{{actor.health.max}}" placeholder="" disabled/>
         </div>
         <div class="divider"></div>
         <div class="labeled-input medium">
-            <label for="currentHealth" class="text">Current</label>
+            <label for="currentHealth" class="text">{{localize "SWSE.UI.LabelCurrent"}}</label>
             <input class="right-input" id="currentHealth" type="number" name="system.health.value"
                    value="{{actor.health.value}}" data-dtype="Number"/>
         </div>
     {{#unless disableSecondWind}}
         <div class="labeled-input medium">
-            <label for="secondWind" class="top" title="Regardless of second winds per day, only one can be used per encounter.">Second
-                Winds/Day</label>
+            <label for="secondWind" class="top" title="Regardless of second winds per day, only one can be used per encounter.">{{localize "SWSE.UI.LabelSecondWindsPerDay"}}</label>
             <input class="left-input" id="secondWind" type="text" placeholder="" disabled/>
             {{#times actor.secondWind.perDay}}
                 {{!-- The spent flags live at system.toggles.secondWinds.<n>: that is the path the
@@ -50,7 +49,7 @@
                       used to write system.secondWind.toggles.<n> instead - `secondWind` is not a
                       declared field, so the DataModel dropped the update and ticking the box stored
                       nothing at all. --}}
-                <input class="left-control-{{this}}" data-action="toggle-second-wind" title="Spent" type="checkbox" data-name="system.toggles.secondWinds.{{this}}"
+                <input class="left-control-{{this}}" data-action="toggle-second-wind" title="{{localize 'SWSE.UI.TitleSpent'}}" type="checkbox" data-name="system.toggles.secondWinds.{{this}}"
                        {{#if (lookup ../actor.system.toggles.secondWinds this)}}checked{{/if}}>
             {{/times}}
         </div>
@@ -59,10 +58,10 @@
 
     {{#unless disableFirstAid}}
         <div class="labeled-input medium">
-            <label for="firstAid" class="top" title="You can usually only accept first aid once per day">First Aid/Day</label>
+            <label for="firstAid" class="top" title="You can usually only accept first aid once per day">{{localize "SWSE.UI.LabelFirstAidPerDay"}}</label>
             <input class="right-input" id="firstAid" type="text" placeholder="" disabled/>
             {{#times actor.firstAid.perDay}}
-                <input class="left-control-{{this}}" data-action="toggle-first-aid" title="Performed" type="checkbox" data-name="system.firstDay.toggles.{{this}}"
+                <input class="left-control-{{this}}" data-action="toggle-first-aid" title="{{localize 'SWSE.UI.TitlePerformed'}}" type="checkbox" data-name="system.firstDay.toggles.{{this}}"
                        {{#if (lookup ../actor.system.firstDay.toggles this)}}checked{{/if}}>
             {{/times}}
         </div>
@@ -76,12 +75,12 @@
                    value="{{actor.system.defense.damageThreshold.total}}" placeholder="" disabled/>
         </div>
         <div class="labeled-input">
-            <label for="dtFort">Fort</label>
+            <label for="dtFort">{{localize "SWSE.UI.LabelFort"}}</label>
             <input class="middle-input" id="dtFort" type="text"
                    value="{{actor.system.defense.fortitude.total}}" placeholder="" disabled/>
         </div>
         <div class="labeled-input">
-            <label for="dtMisc">Misc</label>
+            <label for="dtMisc">{{localize "SWSE.UI.LabelMisc"}}</label>
             <input class="right-input" id="dtMisc" type="number" name="system.defense.damageThreshold.misc"
                    value="{{actor.system.defense.damageThreshold.misc}}" placeholder=""/>
         </div>
@@ -118,7 +117,7 @@
         </div>
     {{#unless disableSimpleSpeedAndBaseAttackBonus}}
         <div class="labeled-input">
-            <label for="characterSpeed">Speed</label>
+            <label for="characterSpeed">{{localize "SWSE.UI.LabelSpeed"}}</label>
             <input class="right-input" id="characterSpeed" type="text" title="{{actor.speed}}"
                    value="{{actor.speed}}" placeholder="" disabled/>
         </div>
@@ -150,7 +149,7 @@
     <h1 class="top-label label resource-label">Shields</h1>
     <div class="flex-row">
         <div class="labeled-input numeric-override" data-override="{{actor.shields.override}}" data-override-name="Total Shields" data-override-key="system.shields.override">
-            <label for="maxShields" class="text">Total</label>
+            <label for="maxShields" class="text">{{localize "SWSE.UI.LabelTotal"}}</label>
             <input class="left-input" id="maxShields" type="text"
                    value="{{actor.shields.max}}" placeholder="" disabled/>
         </div>
@@ -165,7 +164,7 @@
             </div>
         {{/if}}
         <div class="labeled-input">
-            <label for="currentShield" class="text">Current</label>
+            <label for="currentShield" class="text">{{localize "SWSE.UI.LabelCurrent"}}</label>
             <input class="right-input" id="currentShield" type="number" name="system.shields.value" value="{{actor.shields.value}}" data-dtype="Number"/>
 
             <div class="control-2" title="Toggle Shield {{#if actor.shields.active}}Off{{else}}On{{/if}}"><a data-action="shield" data-action-type="toggle" class="{{#if actor.shields.active}}cursor{{/if}}"><i class="fas fa-shield-virus"></i></a></div>

@@ -13,15 +13,15 @@
     <div class="flex-grow1">
         {{!-- Sheet Tab Navigation --}}
         <nav class="sheet-tabs tabs" data-group="primary">
-            <a class="item" data-tab="summary">Summary</a>
-            <a class="item" data-tab="systems">Systems</a>
-            <a class="item" data-tab="stations">Stations</a>
-            <a class="item" data-tab="cargo">Cargo</a>
-            <a class="item" data-tab="traits">Traits</a>
-            <a class="item" data-tab="modes">Modes</a>
-            <a class="item" data-tab="changes">Changes</a>
-            <a class="item" data-tab="description">Notes</a>
-            <a class="item" data-tab="settings">Settings</a>
+            <a class="item" data-tab="summary">{{localize "ITEM.TabSummary"}}</a>
+            <a class="item" data-tab="systems">{{localize "SWSE.UI.TabSystems"}}</a>
+            <a class="item" data-tab="stations">{{localize "SWSE.UI.TabStations"}}</a>
+            <a class="item" data-tab="cargo">{{localize "SWSE.UI.TabCargo"}}</a>
+            <a class="item" data-tab="traits">{{localize "SWSE.UI.TabTraits"}}</a>
+            <a class="item" data-tab="modes">{{localize "SWSE.UI.TabModes"}}</a>
+            <a class="item" data-tab="changes">{{localize "ITEM.TabChanges"}}</a>
+            <a class="item" data-tab="description">{{localize "SWSE.UI.TabNotes"}}</a>
+            <a class="item" data-tab="settings">{{localize "SWSE.UI.TabSettings"}}</a>
         </nav>
 
         {{!-- Sheet Body --}}
@@ -111,11 +111,11 @@
                                 <div class="item-image"><img src="{{mode.img}}" title="{{mode.name}}" width="24" height="24"/>
                                 </div>
                                 <h4 class="item-name">{{mode.name}}</h4>
-                                <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="Has Links"></i>{{/if}}</div>
+                                <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="{{localize 'SWSE.UI.TitleHasLinks'}}"></i>{{/if}}</div>
                                 <div class="item-controls">
                                     <input type="checkbox" {{#unless mode.disabled}}checked{{/unless}} data-type="disable" data-action="effect-control" data-effect-id="{{mode._id}}">
-                                    <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                    <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                    <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                                 </div>
                             </li>
                         {{/unless}}

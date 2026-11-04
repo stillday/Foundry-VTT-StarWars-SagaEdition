@@ -3,11 +3,11 @@
     <div><h1 class="resource-label">Hit Points</h1></div>
     <div class="flex flex-row">
         <div class="resource-block flex flex-col">
-            <label class="resource-label">Total</label>
+            <label class="resource-label">{{localize "SWSE.UI.LabelTotal"}}</label>
                 <input class="plain small" type="number" name="system.health.manualTotal" value="{{actor.health.manualTotal}}" data-dtype="Number"/>
             </div>
         <div class="resource-block flex flex-col">
-            <label class="resource-label">Current</label>
+            <label class="resource-label">{{localize "SWSE.UI.LabelCurrent"}}</label>
             <input class="plain small" type="number" name="system.health.value" value="{{actor.health.value}}" data-dtype="Number"/>
         </div>
     </div>
@@ -23,7 +23,7 @@
         </div>
         <div class="resource-block">+</div>
         <div class="resource-block flex flex-col">
-            <label class="resource-label">Misc</label>
+            <label class="resource-label">{{localize "SWSE.UI.LabelMisc"}}</label>
             <input class="plain small" type="number" name="system.defense.damageThreshold.manualMisc" value="{{actor.system.defense.damageThreshold.manualMisc}}" data-dtype="Number"/>
         </div>
     </div>
@@ -53,7 +53,7 @@
             </div>
         </div>
         <div class="resource-block flex flex-col">
-            <label class="resource-label">Speed</label>
+            <label class="resource-label">{{localize "SWSE.UI.LabelSpeed"}}</label>
             <input class="plain" type="text" name="system.manualSpeed" value="{{actor.system.manualSpeed}}" data-dtype="Number"/>
         </div>
     </div>

@@ -1,18 +1,18 @@
 <div class="flexrow">
     <h2><label class="resource-label">Classes
     </label></h2>
-    <button type="button" class="flex-0" style="flex-basis:180px" data-action="gm-bonus">Add GM Bonus</button>
+    <button type="button" class="flex-0" style="flex-basis:180px" data-action="gm-bonus">{{localize "SWSE.UI.BtnAddGMBonus"}}</button>
 </div>
 <table class="fixed">
     <thead>
     <tr>
         <th></th>
-        <th>Class</th>
+        <th>{{localize "SWSE.UI.LabelClass"}}</th>
         {{#unless actor.isFollower}}
-            <th>Class HP</th>
-            <th>Re-roll HP</th>
-            <th>Attribute Bonus HP</th>
-            <th>Total HP</th>
+            <th>{{localize "SWSE.UI.ColClassHP"}}</th>
+            <th>{{localize "SWSE.UI.ColRerollHP"}}</th>
+            <th>{{localize "SWSE.UI.ColAttrBonusHP"}}</th>
+            <th>{{localize "SWSE.UI.ColTotalHP"}}</th>
         {{/unless}}
         <th>
             <a data-action="compendium" data-type="Item" data-filter="-type:class"
@@ -44,16 +44,16 @@
                 <td>{{sum class.classLevelHealth ../actor.system.abilities.con.mod}}</td>
             {{/unless}}
             <td class="item-controls">
-                <a data-action="view" class="item-control" title="View Class Description"><i
+                <a data-action="view" class="item-control" title="{{localize 'SWSE.UI.TitleViewClassDesc'}}"><i
                         class="fas fa-edit"></i></a>
 
                 {{#unless ../actor.isFollower}}
-                    <a class="item-control item-duplicate" title="Copy Class"><i
+                    <a class="item-control item-duplicate" title="{{localize 'SWSE.UI.TitleCopyClass'}}"><i
                             class="fas fa-plus"></i></a>
 
                 {{/unless}}
                 {{#if class.isLatest}}
-                    <a data-action="remove-class-level" title="Delete Class"><i
+                    <a data-action="remove-class-level" title="{{localize 'SWSE.UI.TitleDeleteClass'}}"><i
                             class="fas fa-trash"></i></a>{{/if}}
             </td>
         </tr>
@@ -65,8 +65,7 @@
             <td></td>
             <td></td>
             <td></td>
-            <td title="these bonuses come from feats, traits, and equipped items.">Other
-                Bonuses:
+            <td title="these bonuses come from feats, traits, and equipped items.">{{localize "SWSE.UI.LabelOtherBonuses"}}
             </td>
             <td> {{actor.health.other}}</td>
             <td></td>

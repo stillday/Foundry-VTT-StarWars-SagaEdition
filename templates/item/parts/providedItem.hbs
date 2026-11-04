@@ -21,7 +21,7 @@
                 {{#unless providedItem.prerequisite}}
                     <a data-action="prerequisite-control" data-type="add-child-prerequisite"
                        data-path="system.providedItems.{{key}}.prerequisite"
-                       title="add prerequisite"><i class="fas fa-plus"></i></a>
+                       title="{{localize 'SWSE.UI.BtnAddPrerequisite'}}"><i class="fas fa-plus"></i></a>
                 {{/unless}}
                 <a data-action="provided-item-control" data-type="delete-item" data-entity-id="{{key}}"><i
                         class="fas fa-trash"></i></a>

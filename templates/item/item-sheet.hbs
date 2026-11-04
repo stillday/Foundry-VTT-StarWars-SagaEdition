@@ -72,12 +72,12 @@
     <nav class="sheet-tabs tabs" data-group="primary">
         <a class="item" data-tab="summary" data-group="primary" data-action="tab">{{localize "ITEM.TabSummary"}}</a>
         <a class="item" data-tab="changes" data-group="primary" data-action="tab">{{localize "ITEM.TabChanges"}}</a>
-        <a class="item" data-tab="provided" data-group="primary" data-action="tab">Provided</a>
-        {{#if item.hasPrerequisites}}<a class="item" data-tab="prerequisites" data-group="primary" data-action="tab">Prerequisites</a>{{/if}}
-        {{#if item.strippable}}<a class="item" data-tab="stripping" data-group="primary" data-action="tab">Stripping</a>{{/if}}
-        {{#if item.modifiable}}<a class="item" data-tab="modifications" data-group="primary" data-action="tab">Modifications</a>{{/if}}
-        {{#if item.hasModes}}<a class="item" data-tab="modes" data-group="primary" data-action="tab">Modes</a>{{/if}}
-        {{#if item.hasLevels}}<a class="item" data-tab="levels" data-group="primary" data-action="tab">Levels</a>{{/if}}
+        <a class="item" data-tab="provided" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabProvided"}}</a>
+        {{#if item.hasPrerequisites}}<a class="item" data-tab="prerequisites" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabPrerequisites"}}</a>{{/if}}
+        {{#if item.strippable}}<a class="item" data-tab="stripping" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabStripping"}}</a>{{/if}}
+        {{#if item.modifiable}}<a class="item" data-tab="modifications" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabModifications"}}</a>{{/if}}
+        {{#if item.hasModes}}<a class="item" data-tab="modes" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabModes"}}</a>{{/if}}
+        {{#if item.hasLevels}}<a class="item" data-tab="levels" data-group="primary" data-action="tab">{{localize "SWSE.UI.TabLevels"}}</a>{{/if}}
     </nav>
 
     {{!-- Sheet Body --}}
@@ -91,7 +91,7 @@
         {{!-- Stripping Tab --}}
         <div class="tab stripping" data-group="primary" data-tab="stripping">
             <div class="resource flex-group-center">
-                <label class="resource-label">Upgrade Points: </label>
+                <label class="resource-label">{{localize "SWSE.UI.LabelUpgradePoints"}}</label>
                 <label class="attribute-value">{{item.upgradePoints}}</label>
                 <table>
                     {{#each item.stripping as |stripping id|}}
@@ -134,7 +134,7 @@
         {{!-- Modifications Tab --}}
         <div class="tab items" data-group="primary" data-tab="modifications">
             <div class="section-header flexrow">
-                <div class="entry">Upgrade Points: {{item.upgradePoints}}</div>
+                <div class="entry">{{localize "SWSE.UI.LabelUpgradePoints"}} {{item.upgradePoints}}</div>
                 <div class="section-header-controls">
                     <a class="control" data-action="effect-control" data-type="add-modification"><i class="far fa-plus-square"></i></a>
                 </div>
@@ -147,11 +147,11 @@
                             </div>
                             <h4 class="item-name">{{modification.name}}</h4>
                             {{#if modification.upgradePoints}}
-                                <h4 class="item-upgrade"><span>Upgrade Cost:{{modification.upgradePoints}}</span></h4>
+                                <h4 class="item-upgrade"><span>{{localize "SWSE.UI.LabelUpgradeCost"}}{{modification.upgradePoints}}</span></h4>
                             {{/if}}
                             <div class="item-controls">
-                                <a data-type="view" data-action="effect-control" data-effect-id="{{modification._id}}" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                <a data-type="delete" data-action="effect-control" data-effect-id="{{modification._id}}" class="item-control" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                <a data-type="view" data-action="effect-control" data-effect-id="{{modification._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                <a data-type="delete" data-action="effect-control" data-effect-id="{{modification._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                             </div>
                         </li>
                     {{/if}}
@@ -177,11 +177,11 @@
                                     {{mode.id}} - source: {{mode.system}}
                                 {{/if}}
                             </h4>
-                            <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="Has Links"></i>{{/if}}</div>
+                            <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="{{localize 'SWSE.UI.TitleHasLinks'}}"></i>{{/if}}</div>
                             <div class="item-controls">
                                 <input type="checkbox" {{#unless mode.disabled}}checked{{/unless}} data-type="disable" data-action="effect-control" data-effect-id="{{mode._id}}">
-                                <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                             </div>
                         </li>
                     {{/if}}

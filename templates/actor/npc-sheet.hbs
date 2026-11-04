@@ -12,9 +12,9 @@
         <div class="flex-grow1">
             {{!-- Sheet Tab Navigation --}}
             <nav class="sheet-tabs tabs" data-group="primary">
-                <a class="item" data-tab="summary">Summary</a>
-                <a class="item" data-tab="import">Import</a>{{!-- or make a button?? --}}
-                <a class="item" data-tab="settings">Settings</a>
+                <a class="item" data-tab="summary">{{localize "ITEM.TabSummary"}}</a>
+                <a class="item" data-tab="import">{{localize "SWSE.UI.TabImport"}}</a>{{!-- or make a button?? --}}
+                <a class="item" data-tab="settings">{{localize "SWSE.UI.TabSettings"}}</a>
             </nav>
 
             {{!-- Sheet Body --}}
@@ -43,13 +43,13 @@
                                 </div>
                                 {{!-- challenge level --}}
                                 <div class="labeled-input">
-                                    <label for="cl" class="text">Challenge Level</label>
+                                    <label for="cl" class="text">{{localize "SWSE.UI.LabelChallengeLevel"}}</label>
                                     <input class="input" id="cl" name="system.cl.value" type="number"
                                         value="{{system.cl.value}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 {{!-- experience --}}
                                 <div class="labeled-input">
-                                    <label for="xp" class="text">XP</label>
+                                    <label for="xp" class="text">{{localize "SWSE.UI.LabelXP"}}</label>
                                     <input class="input" id="xp" name="system.xp" type="text" value="{{system.xp}}"
                                         placeholder="" onfocus="this.select()" />
                                 </div>
@@ -64,19 +64,19 @@
                                 {{else}}
                                 {{!-- size --}}
                                 <div class="labeled-input">
-                                    <label for="size" class="text">Size</label>
+                                    <label for="size" class="text">{{localize "SWSE.UI.LabelSize"}}</label>
                                     <input class="left-input" id="size" name="system.size" type="text"
                                         value="{{system.size}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 {{!-- species --}}
                                 <div class="labeled-input">
-                                    <label for="species" class="text">Species</label>
+                                    <label for="species" class="text">{{localize "SWSE.UI.LabelSpecies"}}</label>
                                     <input class="middle-input" id="species" name="system.details.species" type="text"
                                         value="{{system.details.species}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 {{!-- classes --}}
                                 <div class="labeled-input">
-                                    <label for="classSummary" class="text">Classes</label>
+                                    <label for="classSummary" class="text">{{localize "SWSE.UI.LabelClasses"}}</label>
                                     <input class="right-input" id="classSummary" name="system.details.classes"
                                         type="text" value="{{system.details.classes}}" placeholder=""
                                         onfocus="this.select()" />
@@ -105,13 +105,13 @@
                                 </div>
                                 {{!-- forcepoints special --}}
                                 <div class="labeled-input">
-                                    <label for="forcePtsSp" class="text">Force Special</label>
+                                    <label for="forcePtsSp" class="text">{{localize "SWSE.UI.LabelForceSpecial"}}</label>
                                     <input class="middle-input" id="forcePtsSp" name="system.forceSpecial" type="text"
                                         value="{{system.forceSpecial}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 {{!-- darksidescore --}}
                                 <div class="labeled-input">
-                                    <label for="darkSideScore" class="text">DarkSideScore</label>
+                                    <label for="darkSideScore" class="text">{{localize "SWSE.UI.LabelDarkSideScore"}}</label>
                                     <input class="right-input" id="darkSideScore" name="system.darkSideScore"
                                         type="number" value="{{system.darkSideScore}}" placeholder=""
                                         onfocus="this.select()" />
@@ -128,14 +128,14 @@
                                 {{else}}
                                 {{!-- initiative --}}
                                 <div class="labeled-input">
-                                    <label for="initiative" class="text">Initiative</label>
+                                    <label for="initiative" class="text">{{localize "SWSE.UI.LabelInitiative"}}</label>
                                     <input class="left-input" id="initiative" name="system.skills.init.value"
                                         type="number" value="{{system.skills.init.value}}" placeholder=""
                                         onfocus="this.select()" />
                                 </div>
                                 {{!-- Senses --}}
                                 <div class="labeled-input">
-                                    <label for="senses" class="text">Senses</label>
+                                    <label for="senses" class="text">{{localize "SWSE.UI.LabelSenses"}}</label>
                                     <input class="right-input" id="senses" name="system.details.senses" type="text"
                                         value="{{system.details.senses}}" placeholder="perception"
                                         onfocus="this.select()" />
@@ -149,7 +149,7 @@
                                 <div class="text"><b>Languages </b>{{system.details.lang}}</div>
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="lang" class="text">Languages</label>
+                                    <label for="lang" class="text">{{localize "SWSE.UI.LabelLanguages"}}</label>
                                     <input class="input" id="lang" name="system.details.lang" type="text"
                                         value="{{system.details.lang}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -187,7 +187,7 @@
                                         value="{{system.defense.will.value}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="specialD" class="text">Special Defense</label>
+                                    <label for="specialD" class="text">{{localize "SWSE.UI.LabelSpecialDefense"}}</label>
                                     <input class="input" id="specialD" name="system.defense.special" type="text"
                                         value="{{system.defense.special}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -202,7 +202,7 @@
                                 {{else}}
                                 {{!-- hp --}}
                                 <div class="labeled-input">
-                                    <label for="health" class="text">Health</label>
+                                    <label for="health" class="text">{{localize "SWSE.UI.LabelHealth"}}</label>
                                     <input class="left-input" id="health" name="system.health.max" type="number"
                                         value="{{system.health.max}}" placeholder="max" onfocus="this.select()" />
                                 </div>
@@ -228,7 +228,7 @@
                                 <div class="text"><b>Immunities </b>{{system.details.immunities}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="immunities" class="text">Immunities</label>
+                                    <label for="immunities" class="text">{{localize "SWSE.UI.LabelImmunities"}}</label>
                                     <input class="input" id="immunities" name="system.details.immunities" type="text"
                                         value="{{system.details.immunities}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -241,7 +241,7 @@
                                 <div class="text"><b>Weaknesses </b>{{system.details.weaknesses}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="weaknesses" class="text">Weaknesses</label>
+                                    <label for="weaknesses" class="text">{{localize "SWSE.UI.LabelWeaknesses"}}</label>
                                     <input class="input" id="weaknesses" name="system.details.weaknesses" type="text"
                                         value="{{system.details.weaknesses}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -261,31 +261,31 @@
                                     {{system.speed.special}}{{/if}}</div>
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="walk" class="text">Walk Speed</label>
+                                    <label for="walk" class="text">{{localize "SWSE.UI.LabelWalkSpeed"}}</label>
                                     <input class="input units-input" id="walk" name="system.speed.base" type="number"
                                         value="{{system.speed.base}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 <div class="units-label"> sq</div>
                                 <div class="labeled-input flex-col">
-                                    <label for="swim" class="text">Swim Speed</label>
+                                    <label for="swim" class="text">{{localize "SWSE.UI.LabelSwimSpeed"}}</label>
                                     <input class="input units-input" id="swim" name="system.speed.swim" type="number"
                                         value="{{system.speed.swim}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 <div class="units-label"> sq</div>
                                 <div class="labeled-input">
-                                    <label for="climb" class="text">Climb Speed</label>
+                                    <label for="climb" class="text">{{localize "SWSE.UI.LabelClimbSpeed"}}</label>
                                     <input class="input units-input" id="climb" name="system.speed.climb" type="number"
                                         value="{{system.speed.climb}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 <div class="units-label"> sq</div>
                                 <div class="labeled-input">
-                                    <label for="fly" class="text">Fly Speed</label>
+                                    <label for="fly" class="text">{{localize "SWSE.UI.LabelFlySpeed"}}</label>
                                     <input class="input units-input" id="fly" name="system.speed.fly" type="number"
                                         value="{{system.speed.fly}}" placeholder="" onfocus="this.select()" />
                                 </div>
                                 <div class="units-label"> sq</div>
                                 <div class="labeled-input">
-                                    <label for="speedSp" class="text">Special</label>
+                                    <label for="speedSp" class="text">{{localize "SWSE.UI.LabelSpecial"}}</label>
                                     <input class="input" id="speedSp" name="system.speed.special" type="text"
                                         value="{{system.speed.special}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -302,14 +302,14 @@
                                 {{else}}
                                 {{!-- fighting space optional --}}
                                 <div class="labeled-input">
-                                    <label for="fightSpace" class="text">Fighting Space</label>
+                                    <label for="fightSpace" class="text">{{localize "SWSE.UI.LabelFightingSpace"}}</label>
                                     <input class="left-input" id="fightSpace" name="system.details.fightSpace"
                                         type="text" value="{{system.details.fightSpace}}" placeholder=""
                                         onfocus="this.select()" />
                                 </div>
                                 {{!-- reach --}}
                                 <div class="labeled-input">
-                                    <label for="reach" class="text">Reach</label>
+                                    <label for="reach" class="text">{{localize "SWSE.UI.LabelReach"}}</label>
                                     <input class="right-input" id="reach" name="system.reach" type="number"
                                         value="{{system.reach}}" placeholder="" onfocus="this.select()" />
                                 </div>
@@ -342,7 +342,7 @@
                                 <div class="text"><b>Atk Options </b>{{system.details.atkOptions}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="atkOptions" class="text">Attack Options</label>
+                                    <label for="atkOptions" class="text">{{localize "SWSE.UI.LabelAttackOptions"}}</label>
                                     <textarea class="input" id="atkOptions" name="system.details.atkOptions"
                                         placeholder="" onfocus="this.select()">{{system.details.atkOptions}}</textarea>
                                 </div>
@@ -355,7 +355,7 @@
                                 <div class="text"><b>Special Actions </b>{{system.details.specialActions}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="specialActions" class="text">Special Actions</label>
+                                    <label for="specialActions" class="text">{{localize "SWSE.UI.LabelSpecialActions"}}</label>
                                     <textarea class="input" id="specialActions" name="system.details.specialActions"
                                         placeholder=""
                                         onfocus="this.select()">{{system.details.specialActions}}</textarea>
@@ -423,32 +423,32 @@
                                 </div>
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="str" class="text">Strength</label>
+                                    <label for="str" class="text">{{localize "SWSE.UI.LabelStrength"}}</label>
                                     <input class="input" id="str" name="system.abilities.str.base" type="number"
                                         value="{{abilities.str.value}}" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="dex" class="text">Dexterity</label>
+                                    <label for="dex" class="text">{{localize "SWSE.UI.LabelDexterity"}}</label>
                                     <input class="input" id="dex" name="system.abilities.dex.base" type="number"
                                         value="{{abilities.dex.value}}" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="con" class="text">Constitution</label>
+                                    <label for="con" class="text">{{localize "SWSE.UI.LabelConstitution"}}</label>
                                     <input class="input" id="con" name="system.abilities.con.base" type="number"
                                         value="{{abilities.con.value}}" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="wis" class="text">Wisdom</label>
+                                    <label for="wis" class="text">{{localize "SWSE.UI.LabelWisdom"}}</label>
                                     <input class="input" id="wis" name="system.abilities.wis.base" type="number"
                                         value="{{abilities.wis.value}}" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="int" class="text">Intelligence</label>
+                                    <label for="int" class="text">{{localize "SWSE.UI.LabelIntelligence"}}</label>
                                     <input class="input" id="int" name="system.abilities.int.base" type="number"
                                         value="{{abilities.int.value}}" onfocus="this.select()" />
                                 </div>
                                 <div class="labeled-input">
-                                    <label for="cha" class="text">Charisma</label>
+                                    <label for="cha" class="text">{{localize "SWSE.UI.LabelCharisma"}}</label>
                                     <input class="input" id="cha" name="system.abilities.cha.base" type="number"
                                         value="{{abilities.cha.value}}" onfocus="this.select()" />
                                 </div>
@@ -517,7 +517,7 @@
                                 <div class="labeled-input">
                                     <label for="systems" class="text">Systems</label>
                                     <textarea class="input" id="systems" name="system.details.systems"
-                                        placeholder="Droids and Cyborgs only"
+                                        placeholder="{{localize 'SWSE.UI.PlaceholderDroidsOnly'}}"
                                         onfocus="this.select()">{{system.details.systems}}</textarea>
                                 </div>
                                 {{/unless}}
@@ -529,7 +529,7 @@
                                 <div class="text"><b>Possessions </b>{{system.details.possesses}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="possesses" class="text">Possessions</label>
+                                    <label for="possesses" class="text">{{localize "SWSE.UI.LabelPossessions"}}</label>
                                     <textarea class="input" id="possesses" name="system.details.possesses"
                                         placeholder="" onfocus="this.select()">{{system.details.possesses}}</textarea>
                                 </div>
@@ -545,7 +545,7 @@
                                 <div class="text">{{system.details.notes}}</div>{{/if}}
                                 {{else}}
                                 <div class="labeled-input">
-                                    <label for="notes" class="text">Notes</label>
+                                    <label for="notes" class="text">{{localize "SWSE.UI.LabelNotes"}}</label>
                                     <textarea class="input" id="notes" name="system.details.notes" placeholder=""
                                         onfocus="this.select()">{{system.details.notes}}</textarea>
                                 </div>
@@ -564,9 +564,9 @@
                 </div>
                 <div class="tab import flex-col" data-group="primary" data-tab="import">
                     <div class="flexcol">
-                        <label for="import" class="text">Import statblock</label>
+                        <label for="import" class="text">{{localize "SWSE.UI.LabelImportStatblock"}}</label>
                         <textarea class="input" id="import" name="import.data"
-                            placeholder="copy and paste stat-block here. Currently unsupported." rows="30"></textarea>
+                            placeholder="{{localize 'SWSE.UI.PlaceholderStatblock'}}" rows="30"></textarea>
                     </div>
                 </div>
                 <div class="tab settings flex-col" data-group="primary" data-tab="settings">

@@ -15,7 +15,7 @@
            data-notes="{{skill.notes}}" data-key="@{{skillId}}">
             <i class="fas fa-dice-d20"></i>
         </a>
-        {{#unless skill.uut}}(TRAINED ONLY){{/unless}}
+        {{#unless skill.uut}}{{localize "SWSE.UI.TrainedOnly"}}{{/unless}}
         <a href="{{skill.link}}">{{skill.label}}</a>
     </th>
     <td title="{{skill.title}}">{{skill.value}}</td>

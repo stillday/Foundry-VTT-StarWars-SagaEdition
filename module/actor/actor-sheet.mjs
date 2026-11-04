@@ -380,7 +380,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         // An actor without the Use the Force skill has no resolved variable, and building a Roll
         // out of "undefined" throws out of this click handler.
         if (!formula) {
-            ui.notifications.warn(`${this.object.name} has no Use the Force roll to block or deflect with.`);
+            ui.notifications.warn(game.i18n.format("SWSE.UI.WarnNoUseTheForce", {name: this.object.name}));
             return;
         }
 
@@ -1490,12 +1490,12 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         const actor = this.actor;
         const health = actor.system.health;
         if (!meetsSecondWindThreshold(health.value, health.max)) {
-            ui.notifications.warn(`${actor.name}: Second Wind only works at half hit points or less (${health.value} / ${health.max}).`);
+            ui.notifications.warn(game.i18n.format("SWSE.UI.WarnSecondWindHP", {name: actor.name, value: health.value, max: health.max}));
             return;
         }
         const slot = firstFreeSecondWind(actor.system.secondWinds ?? 0, actor.system.toggles?.secondWinds);
         if (slot < 0) {
-            ui.notifications.warn(`${actor.name} has no Second Wind left today.`);
+            ui.notifications.warn(game.i18n.format("SWSE.UI.WarnNoSecondWind", {name: actor.name}));
             return;
         }
         const heal = secondWindHealing(health.max, actor.system.abilities?.con?.skip ? null : actor.system.abilities?.con?.value);
@@ -1506,7 +1506,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         });
         await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({actor}),
-            content: `${actor.name} catches a second wind and heals ${newValue - health.value} hit points.`
+            content: game.i18n.format("SWSE.UI.ChatSecondWind", {name: actor.name, healed: newValue - health.value})
         });
     }
 
@@ -1566,7 +1566,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
-            title: "Assign Ability Scores",
+            title: game.i18n.localize("SWSE.UI.DialogAssignAbilityScores"),
             content: content,
             yes: (html) => {
                 let response = {str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8};

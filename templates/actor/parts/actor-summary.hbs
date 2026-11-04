@@ -6,20 +6,20 @@
     </div>
 
     <div class="large labeled-input">
-        <label for="player" class="text">Player</label>
+        <label for="player" class="text">{{localize "SWSE.UI.LabelPlayer"}}</label>
         <input class="input" name="system.details.player" id="player" type="text" value="{{actor.system.details.player}}"
                placeholder=""/>
     </div>
 
     <div class="medium labeled-input">
-        <label for="classSummary" class="text">Classes</label>
+        <label for="classSummary" class="text">{{localize "SWSE.UI.LabelClasses"}}</label>
         <input class="input" id="classSummary" type="text" value="{{actor.classSummary}}" placeholder=""
                title="Read only: this summarises the class levels on the Class tab. Add or remove class levels there."
                disabled/>
     </div>
 
     <div class="small labeled-input">
-        <label for="level" class="text">Level</label>
+        <label for="level" class="text">{{localize "SWSE.UI.LabelLevel"}}</label>
         <input class="input" id="level" type="text" value="{{actor.levelSummary}}" placeholder=""
                title="Read only: your level is the number of class levels you have taken. Add a class level on the Class tab to raise it."
                disabled/>
@@ -31,7 +31,7 @@
     </div>
 
     <div class="large labeled-input item clickable">
-        <label for="species" class="text">Species</label>
+        <label for="species" class="text">{{localize "SWSE.UI.LabelSpecies"}}</label>
         <div class="input" id="species"{{#if actor.species}} data-action="view" data-item-id="{{actor.species.id}}" title="View this species item" {{else}} data-action="compendium" data-type="Item" data-filter="-type:species" title="Opens the species compendium browser. Drag a species from the browser onto this sheet to add it - clicking an entry only opens it for reading." {{/if}}>{{#if actor.species}}{{actor.species.name}}{{else}}Add Species{{/if}}</div>
         {{#if actor.species}}
             <div class="control-1">
@@ -53,23 +53,23 @@
     </div>
 
     <div class="medium labeled-input clickable">
-        <label for="gender" class="text clickable">Gender</label>
+        <label for="gender" class="text clickable">{{localize "SWSE.UI.LabelGender"}}</label>
         <div class="input clickable" data-action="gender" id="gender">{{#if actor.system.details.gender}}{{actor.system.details.gender}}{{else}}{{#if actor.system.details.sex}}{{actor.system.details.sex}}{{/if}}{{/if}}</div>
     </div>
 
 
     <div class="medium labeled-input">
-        <label for="age" class="text clickable">Age</label>
+        <label for="age" class="text clickable">{{localize "SWSE.UI.LabelAge"}}</label>
         <div class="input clickable" data-action="age" id="age">{{#if actor.system.details.age}}{{actor.system.details.age}} years{{/if}}</div>
     </div>
 
     <div class="small labeled-input">
-        <label for="height" class="text">Height</label>
+        <label for="height" class="text">{{localize "SWSE.UI.LabelHeight"}}</label>
         <input class="input" id="height" name="system.details.height" type="text" value="{{actor.system.details.height}}" placeholder=""/>
     </div>
 
     <div class="small labeled-input">
-        <label for="weight" class="text">Weight</label>
+        <label for="weight" class="text">{{localize "SWSE.UI.LabelWeight"}}</label>
         <input class="input" id="weight" name="system.details.weight" type="text" value="{{actor.system.details.weight}}" placeholder=""/>
     </div>
 
@@ -77,7 +77,7 @@
 
     {{#unless actor.isFollower}}
     <div class="large labeled-input item" data-item-id="{{#if actor.destiny}}{{actor.destiny.id}}{{else}}{{#if actor.background}}{{actor.background.id}}{{/if}}{{/if}}">
-        <label for="destiny" class="text">{{#if actor.destiny}}Destiny{{else}}{{#if actor.background}}Background{{else}}Destiny or Background{{/if}}{{/if}}</label>
+        <label for="destiny" class="text">{{#if actor.destiny}}{{localize "SWSE.UI.LabelDestiny"}}{{else}}{{#if actor.background}}{{localize "SWSE.UI.LabelBackground"}}{{else}}{{localize "SWSE.UI.LabelDestinyOrBackground"}}{{/if}}{{/if}}</label>
         <input class="input" id="destiny"  type="text" value="{{#if actor.destiny}}{{actor.destiny.name}}{{else}}{{#if actor.background}}{{actor.background.name}}{{/if}}{{/if}}" placeholder=""
                title="Read only: use the folder buttons on the right to pick a Destiny or Background from a compendium, or drag one onto the sheet."
                disabled/>
@@ -103,7 +103,7 @@
 
     </div>
     <div class="small labeled-input">
-        <label for="experience" class="text">XP</label>
+        <label for="experience" class="text">{{localize "SWSE.UI.LabelXP"}}</label>
         <input class="input" id="experience" name="system.details.experience" type="number" value="{{actor.system.details.experience}}" placeholder=""/>
     </div>
     {{/unless}}

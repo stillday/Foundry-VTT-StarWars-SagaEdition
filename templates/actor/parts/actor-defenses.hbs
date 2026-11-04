@@ -2,13 +2,13 @@
 <div class="defenses-block panel flex flex-col">
     <div class="flex-row">
         <h1 class="huge resource-label">Defenses
-            <a data-action="to-chat" data-action-type="defense" title="Share"><i class="fas fa-share"></i></a>
+            <a data-action="to-chat" data-action-type="defense" title="{{localize 'SWSE.UI.LabelShare'}}"><i class="fas fa-share"></i></a>
         </h1>
         <div class="large large-header">Base<br/></div>
-        <div class="large large-header">Level/<br/>Armor</div>
+        <div class="large large-header">{{localize "SWSE.UI.LabelLevelOrArmor"}}<br/></div>
         <div class="large large-header">Ability<br/></div>
-        <div class="large large-header">Class<br/></div>
-        <div class="large large-header">Misc<br/></div>
+        <div class="large large-header">{{localize "SWSE.UI.LabelClass"}}<br/></div>
+        <div class="large large-header">{{localize "SWSE.UI.LabelMisc"}}<br/></div>
     </div>
     {{#each actor.system.defense as |def id|}}
         {{#unless def.skip}}

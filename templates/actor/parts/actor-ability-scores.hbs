@@ -41,18 +41,18 @@
     {{#unless actor.system.lockAttributes}}
         <div class="flex flex-row">
             {{#ifEquals actor.system.finalAttributeGenerationType "Roll"}}
-                <div class="rollAbilities clickable" title="Roll Abilities"><a><i class="fas fa-edit"></i> Roll Abilities</a></div>
+                <div class="rollAbilities clickable" title="{{localize 'SWSE.UI.BtnRollAbilities'}}"><a><i class="fas fa-edit"></i> {{localize "SWSE.UI.BtnRollAbilities"}}</a></div>
             {{/ifEquals}}
             {{#ifEquals actor.system.finalAttributeGenerationType "Standard Array"}}
-                <div class="assignStandardArray clickable" title="Assign Ability Scores"><a><i class="fas fa-edit"></i> Assign Standard Array</a></div>
+                <div class="assignStandardArray clickable" title="{{localize 'SWSE.UI.DialogAssignAbilityScores'}}"><a><i class="fas fa-edit"></i> {{localize "SWSE.UI.BtnAssignStandardArray"}}</a></div>
             {{/ifEquals}}
             {{#ifEquals actor.system.finalAttributeGenerationType "Point Buy"}}
-                <div class="assignAttributePoints clickable" title="Assign Ability Points"><a><i class="fas fa-edit"></i> Assign Ability Points</a>
+                <div class="assignAttributePoints clickable" title="{{localize 'SWSE.UI.BtnAssignAbilityPoints'}}"><a><i class="fas fa-edit"></i> {{localize "SWSE.UI.BtnAssignAbilityPoints"}}</a>
                 </div>
             {{/ifEquals}}
             {{#unlessEquals actor.system.finalAttributeGenerationType "Manual"}}
                 {{#if actor.availableItems.[Ability Score Level Bonus]}}
-                    <button type="button" class="flex-0 editor" style="flex-basis:180px" data-action="level-up-bonus" title="Select Level Up Attribute Bonus for Level">Level Up Bonus</button>
+                    <button type="button" class="flex-0 editor" style="flex-basis:180px" data-action="level-up-bonus" title="Select Level Up Attribute Bonus for Level">{{localize "SWSE.UI.BtnLevelUpBonus"}}</button>
                 {{/if}}
             {{/unlessEquals}}
         </div>

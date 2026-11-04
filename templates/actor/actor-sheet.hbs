@@ -12,22 +12,22 @@
         <div class="flex-grow1">
             {{!-- Sheet Tab Navigation --}}
             <nav class="sheet-tabs tabs" data-group="primary">
-                <a class="item" data-tab="summary">Summary</a>
+                <a class="item" data-tab="summary">{{localize "ITEM.TabSummary"}}</a>
                 {{#if actor.isDebug}}<a class="item" data-tab="actions">Actions</a>{{/if}}
-                <a class="item" data-tab="charClass">Class</a>
-                {{#if actor.isBeast}}<a class="item" data-tab="beast">Beast</a>{{/if}}
-                <a class="item" data-tab="equipment">Equipment</a>
+                <a class="item" data-tab="charClass">{{localize "SWSE.UI.TabClass"}}</a>
+                {{#if actor.isBeast}}<a class="item" data-tab="beast">{{localize "SWSE.UI.TabBeast"}}</a>{{/if}}
+                <a class="item" data-tab="equipment">{{localize "SWSE.UI.TabEquipment"}}</a>
                 <!--        {{#if
                         actor.system.isDroid}}<a class="item" data-tab="droid"><span>Droid Systems</span></a>{{/if}}-->
-                <a class="item" data-tab="feats">Feats & Talents</a>
+                <a class="item" data-tab="feats">{{localize "SWSE.UI.TabFeatsAndTalents"}}</a>
 <!--                <a class="item" data-tab="talents">Talents</a>-->
-                {{#unless actor.hideForce}}<a class="item" data-tab="force">The Force</a>{{/unless}}
-                <a class="item" data-tab="affiliations">Affiliations & Languages</a>
-                <a class="item" data-tab="traits">Traits</a>
-                <a class="item" data-tab="modes">Modes</a>
-                <a class="item" data-tab="changes">Changes</a>
-                <a class="item" data-tab="description">Notes</a>
-                <a class="item" data-tab="settings">Settings</a>
+                {{#unless actor.hideForce}}<a class="item" data-tab="force">{{localize "SWSE.UI.TabTheForce"}}</a>{{/unless}}
+                <a class="item" data-tab="affiliations">{{localize "SWSE.UI.TabAffiliationsAndLanguages"}}</a>
+                <a class="item" data-tab="traits">{{localize "SWSE.UI.TabTraits"}}</a>
+                <a class="item" data-tab="modes">{{localize "SWSE.UI.TabModes"}}</a>
+                <a class="item" data-tab="changes">{{localize "ITEM.TabChanges"}}</a>
+                <a class="item" data-tab="description">{{localize "SWSE.UI.TabNotes"}}</a>
+                <a class="item" data-tab="settings">{{localize "SWSE.UI.TabSettings"}}</a>
 
             </nav>
 
@@ -101,7 +101,7 @@
                 <div class="tab items" data-group="primary" data-tab="equipment">
                     <div>
                         <h2>
-                            <label class="resource-label">Equipment
+                            <label class="resource-label">{{localize "SWSE.UI.SectionEquipment"}}
                                 <a data-action="compendium" data-type="Item" data-pack="swse.armor"
                                    data-action-target="swse.armor"
                                    title="Armor"><i
@@ -162,10 +162,10 @@
                         {{#each actor.secrets as |item id|}}
                             <li class="item flexrow" data-item-id="{{item._id}}">
                                 <h4 class="item-name"><b>{{item.name}}</b></h4>
-                                <h4 class="item-name"><b>Prerequisites:</b> {{item.prerequisites}}</h4>
+                                <h4 class="item-name"><b>{{localize "SWSE.UI.LabelPrerequisitesColon"}}</b> {{item.prerequisites}}</h4>
                                 <div class="item-controls">
-                                    <a data-action="view" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                    <a class="item-control item-delete" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    <a data-action="view" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                    <a class="item-control item-delete" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                                 </div>
                             </li>
                         {{/each}}
@@ -180,10 +180,10 @@
                         {{#each actor.techniques as |item id|}}
                             <li class="item flexrow" data-item-id="{{item._id}}">
                                 <h4 class="item-name"><b>{{item.name}}</b></h4>
-                                <h4 class="item-name"><b>Prerequisites:</b> {{item.prerequisites}}</h4>
+                                <h4 class="item-name"><b>{{localize "SWSE.UI.LabelPrerequisitesColon"}}</b> {{item.prerequisites}}</h4>
                                 <div class="item-controls">
-                                    <a data-action="view" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                    <a class="item-control item-delete" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    <a data-action="view" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                    <a class="item-control item-delete" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                                 </div>
                             </li>
                         {{/each}}
@@ -198,10 +198,10 @@
                         {{#each actor.regimens as |item id|}}
                             <li class="item flexrow" data-item-id="{{item._id}}">
                                 <h4 class="item-name"><b>{{item.name}}</b></h4>
-                                <h4 class="item-name"><b>Prerequisites:</b> {{item.prerequisites}}</h4>
+                                <h4 class="item-name"><b>{{localize "SWSE.UI.LabelPrerequisitesColon"}}</b> {{item.prerequisites}}</h4>
                                 <div class="item-controls">
-                                    <a data-action="view" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                    <a class="item-control item-delete" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    <a data-action="view" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                    <a class="item-control item-delete" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                                 </div>
                             </li>
                         {{/each}}
@@ -235,7 +235,7 @@
                     <div class="flexcol">
                         <div class="flexrow">
                             <div class="flex-1">
-                                <label class="resource-label">Settings</label>
+                                <label class="resource-label">{{localize "SWSE.UI.TabSettings"}}</label>
                             </div>
                         </div>
                         {{#each actor.settings as |setting key|}}
@@ -262,11 +262,11 @@
                                         {{mode.id}} - source: {{mode.system}}
                                     {{/if}}
                                 </h4>
-                                <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="Has Links"></i>{{/if}}</div>
+                                <div>{{#if mode.hasLinks}}<i class="fas fa-link" title="{{localize 'SWSE.UI.TitleHasLinks'}}"></i>{{/if}}</div>
                                 <div class="item-controls">
                                     <input type="checkbox" {{#unless mode.disabled}}checked{{/unless}} data-type="disable" data-action="effect-control" data-effect-id="{{mode._id}}">
-                                    <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Edit Item"><i class="fas fa-edit"></i></a>
-                                    <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="Delete Item"><i class="fas fa-trash"></i></a>
+                                    <a data-type="view" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleEditItem'}}"><i class="fas fa-edit"></i></a>
+                                    <a data-type="delete" data-action="effect-control" data-effect-id="{{mode._id}}" class="item-control" title="{{localize 'SWSE.UI.TitleDeleteItem'}}"><i class="fas fa-trash"></i></a>
                                 </div>
                             </li>
                         {{/each}}
