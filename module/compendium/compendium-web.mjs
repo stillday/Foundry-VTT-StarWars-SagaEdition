@@ -704,32 +704,24 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
 }
 
 export function initializeCompendiumButtons() {
-    Hooks.on("renderCompendiumDirectory", (function (e, t) {
-        const featTalentButton = $(`<button type="button" class="feat-web-button constant-button" data-tooltip="SWSE.TALENT_AND_FEAT_WEB"><b class="button-text">Talent and Feat Web</b></button>`);
-        featTalentButton.on("click", (function () {
-            const options = {
-                types: ['feat', "talent"]
-            }
-            new CompendiumWeb(options).render(!0)
-        }))
-        t.append(featTalentButton)
-
-        const featButton = $(`<button type="button" class="feat-web-button constant-button" data-tooltip="SWSE.FEAT_WEB"><b class="button-text">Feat Web</b></button>`);
-        featButton.on("click", (function () {
-            const options = {
-                types: ['feat']
-            }
-            new CompendiumWeb(options).render(!0)
-        }))
-        t.append(featButton)
-
-        const talentButton = $(`<button type="button" class="talent-web-button constant-button" data-tooltip="SWSE.TALENT_WEB"><b class="button-text">Talent Web</b></button>`);
-        talentButton.on("click", (function () {
-            const options = {
-                types: ['talent']
-            }
-            new CompendiumWeb(options).render(!0)
-        }))
-        t.append(talentButton)
-    }))
+    // CompendiumDirectory is an ApplicationV2 in v14: the hook receives a plain HTMLElement
+    // (appending a jQuery object printed "[object Object]" into the sidebar).
+    const buttons = [
+        {cls: "feat-web-button", tooltip: "SWSE.TALENT_AND_FEAT_WEB", label: "Talent and Feat Web", types: ["feat", "talent"]},
+        {cls: "feat-web-button", tooltip: "SWSE.FEAT_WEB", label: "Feat Web", types: ["feat"]},
+        {cls: "talent-web-button", tooltip: "SWSE.TALENT_WEB", label: "Talent Web", types: ["talent"]}
+    ];
+    Hooks.on("renderCompendiumDirectory", (app, html) => {
+        const root = html instanceof HTMLElement ? html : html[0];
+        if (!root || root.querySelector(".feat-web-button")) return;
+        for (const def of buttons) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = `${def.cls} constant-button`;
+            button.dataset.tooltip = def.tooltip;
+            button.innerHTML = `<b class="button-text">${def.label}</b>`;
+            button.addEventListener("click", () => new CompendiumWeb({types: def.types}).render(true));
+            root.append(button);
+        }
+    });
 }
