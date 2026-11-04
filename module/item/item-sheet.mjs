@@ -327,7 +327,7 @@ export class SWSEItemSheet extends HandlebarsApplicationMixin(foundry.applicatio
         `;
 
         const options = {
-            title: "New Attribute",
+            title: game.i18n.localize("SWSE.UI.DialogNewAttribute"),
             content,
             callback: async (html) => {
                 const key = html.find("#key")[0].value;
@@ -368,7 +368,7 @@ export class SWSEItemSheet extends HandlebarsApplicationMixin(foundry.applicatio
         `;
 
         const options = {
-            title: "New Mode",
+            title: game.i18n.localize("SWSE.UI.DialogNewMode"),
             content,
             callback: async (html) => {
                 const name = html.find("#name")[0].value;

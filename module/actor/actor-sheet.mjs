@@ -324,8 +324,8 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         //CLEANUP PROMPTS
         html.find('[data-action="remove-leaked-level-effects"]').click((e) => {
             Dialog.prompt({
-                title: 'Are you sure you want to perform this cleanup?',
-                content: 'A long lived bug was creating additional copies of level effects.  There should be no reason to keep these unless you are doing custom scripting around them.',
+                title: game.i18n.localize("SWSE.UI.DialogCleanupTitle"),
+                content: game.i18n.localize("SWSE.UI.DialogCleanupLevelEffectsContent"),
                 callback: () => {
                     const effectIds = this.object.effects.filter(effect => effect.flags.swse.isLevel).map(effect => effect.id)
                     this.object.deleteEmbeddedDocuments("ActiveEffect", effectIds);
@@ -334,8 +334,8 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         });
         html.find('[data-action="remove-fire-mode-effects"]').click((e) => {
             Dialog.prompt({
-                title: 'Are you sure you want to perform this cleanup?',
-                content: 'A long lived bug was creating additional copies of Fire Mode effects.  There should be no reason to keep these unless you are doing custom scripting around them.',
+                title: game.i18n.localize("SWSE.UI.DialogCleanupTitle"),
+                content: game.i18n.localize("SWSE.UI.DialogCleanupFireModeEffectsContent"),
                 callback: () => {
                     const effectIds = this.object.effects.filter(effect => effect.flags.swse.group === "Fire Mode").map(effect => effect.id)
                     this.object.deleteEmbeddedDocuments("ActiveEffect", effectIds);
@@ -443,7 +443,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         // Hooks.onError and Document.create resolves to undefined.  Say so instead of failing with
         // a TypeError two lines further down.
         if (!follower) {
-            ui.notifications.error(`SWSE could not create a follower for ${this.object.name}. See the console for the validation error.`);
+            ui.notifications.error(game.i18n.format("SWSE.UI.WarnFollowerCreateFailed", {name: this.object.name}));
             return;
         }
 
@@ -750,7 +750,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         let content = `<p>Enter your age. Adults have no modifiers:</p><input class="range" id="age" placeholder="Age" type="number" value="${age}"/><div>${traits}</div>`
 
         return {
-            title: "Age Selection",
+            title: game.i18n.localize("SWSE.UI.DialogAgeSelection"),
             content: content,
             callback: async (html) => {
                 let key = html.find("#age")[0].value;
@@ -801,7 +801,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 <div>${traits}</div>`
 
         return {
-            title: "Gender Selection",
+            title: game.i18n.localize("SWSE.UI.DialogGenderSelection"),
             content: content,
             callback: async (html) => {
                 sheet.actor.setGender(html.find("#sex")[0].value, html.find("#gender")[0].value);
@@ -1378,7 +1378,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         } else {
             button.disabled = true;
 
-            let title = `Are you sure you want to delete ${itemToDelete.finalName}`;
+            let title = game.i18n.format("SWSE.UI.DialogDeleteItemTitle", {name: itemToDelete.finalName});
             await Dialog.confirm({
                 title: title,
                 content: title,
@@ -1406,7 +1406,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         } else {
             button.disabled = true;
 
-            let title = `Are you sure you want to delete ${itemToDelete.finalName}`;
+            let title = game.i18n.format("SWSE.UI.DialogDeleteItemTitle", {name: itemToDelete.finalName});
             await Dialog.confirm({
                 title: title,
                 content: title,
@@ -1653,7 +1653,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
-            title: "Assign Ability Score Points",
+            title: game.i18n.localize("SWSE.UI.DialogAssignAbilityScorePoints"),
             content: content,
             yes: async (html) => {
                 let response = {};
@@ -1704,7 +1704,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
-            title: "Assign Ability Score Points",
+            title: game.i18n.localize("SWSE.UI.DialogAssignAbilityScorePoints"),
             content: content,
             yes: async (html) => {
                 let response = {};
@@ -1762,7 +1762,7 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         let content = await foundry.applications.handlebars.renderTemplate(template, data);
 
         let response = await Dialog.confirm({
-            title: "Assign Ability Score Points",
+            title: game.i18n.localize("SWSE.UI.DialogAssignAbilityScorePoints"),
             content: content,
             yes: (html) => {
                 let response = {};
@@ -1805,8 +1805,8 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 
     _unavailable() {
         Dialog.prompt({
-            title: "Sorry this content isn't finished.",
-            content: "Sorry, this content isn't finished.  if you have an idea of how you think it should work please let me know.",
+            title: game.i18n.localize("SWSE.UI.DialogUnavailableTitle"),
+            content: game.i18n.localize("SWSE.UI.DialogUnavailableContent"),
             callback: () => {
             }
         })
@@ -1870,24 +1870,24 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
         }
         if (weaponOnly) {
             new Dialog({
-                title: "Weapon Systems Only",
-                content: `This slot only allows weapon systems to be added at this time.`,
+                title: game.i18n.localize("SWSE.UI.DialogWeaponSystemsOnly"),
+                content: game.i18n.localize("SWSE.UI.DialogWeaponSystemsOnlyContent"),
                 buttons: {
                     ok: {
                         icon: '<i class="fas fa-check"></i>',
-                        label: 'Ok'
+                        label: game.i18n.localize("SWSE.UI.BtnOk")
                     }
                 }
             }).render(true);
         } else {
 
             new Dialog({
-                title: "Weapon Systems Not Allowed",
-                content: `This slot does not allow weapon systems to be added at this time.`,
+                title: game.i18n.localize("SWSE.UI.DialogWeaponSystemsNotAllowed"),
+                content: game.i18n.localize("SWSE.UI.DialogWeaponSystemsNotAllowedContent"),
                 buttons: {
                     ok: {
                         icon: '<i class="fas fa-check"></i>',
-                        label: 'Ok'
+                        label: game.i18n.localize("SWSE.UI.BtnOk")
                     }
                 }
             }).render(true);
@@ -1896,12 +1896,12 @@ export class SWSEActorSheet extends foundry.appv1.sheets.ActorSheet {
 
     onlyAllowsAstromechsDialog() {
         new Dialog({
-            title: "Astromech Droids Only",
-            content: `This slot only allows Astromech droids and other 2nd-Degree droids to be added at this time.`,
+            title: game.i18n.localize("SWSE.UI.DialogAstromechOnly"),
+            content: game.i18n.localize("SWSE.UI.DialogAstromechOnlyContent"),
             buttons: {
                 ok: {
                     icon: '<i class="fas fa-check"></i>',
-                    label: 'Ok'
+                    label: game.i18n.localize("SWSE.UI.BtnOk")
                 }
             }
         }).render(true);

@@ -3,19 +3,19 @@ import {getInheritableAttribute} from "../attribute-helper.mjs";
 
 export function addSubCredits(type, actor) {
     let d = new Dialog({
-        title: type === 'add' ? "Add Credits" : "Subtract Credits",
+        title: type === 'add' ? game.i18n.localize("SWSE.UI.DialogAddCreditsTitle") : game.i18n.localize("SWSE.UI.DialogSubtractCreditsTitle"),
         content: `<label>Credits
                          <input type="number" value="0" id="credits" data-action="${type === 'add' ? "add" : "sub"}" name="credits"></label>`,
         buttons: {
             one: {
                 icon: '',
-                label: "Cancel",
+                label: game.i18n.localize("SWSE.UI.BtnCancel"),
                 callback: () => {
                 }
             },
             two: {
                 icon: '',
-                label: type === 'add' ? "Add" : "Subtract",
+                label: type === 'add' ? game.i18n.localize("SWSE.UI.BtnAdd") : game.i18n.localize("SWSE.UI.BtnSubtract"),
                 callback: (html) => {
                     let input = html.find("#credits")[0];
                     let modifier = input.value;
@@ -56,18 +56,18 @@ export function transferCredits(actor) {
                      <div><select>${options}</select><label>Credits:<div class="item-credits">0</div></label></div>
                  </div>`;
     let d = new Dialog({
-        title: "Transfer Credits",
+        title: game.i18n.localize("SWSE.UI.DialogTransferCreditsTitle"),
         content: content,
         buttons: {
             one: {
                 icon: '',
-                label: "Cancel",
+                label: game.i18n.localize("SWSE.UI.BtnCancel"),
                 callback: () => {
                 }
             },
             two: {
                 icon: '',
-                label: "Confirm",
+                label: game.i18n.localize("SWSE.UI.BtnConfirm"),
                 callback: (html) => {
                     let input = html.find("#credits")[0];
                     let select = html.find("select")[0];

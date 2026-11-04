@@ -229,19 +229,19 @@ export class ItemAmmunitionDelegate {
             ammoItem = availableAmmunition[0];
         } else if (availableAmmunition.length > 1) {
             ammoItem = await selectItemFromArray(availableAmmunition, {
-                title: "Select Ammo to Load",
-                content: "Select Ammo to Load"
+                title: game.i18n.localize("SWSE.UI.DialogSelectAmmoTitle"),
+                content: game.i18n.localize("SWSE.UI.DialogSelectAmmoTitle")
             }, {fields: ["system.quantity"]});
         }
         let result = await this.queueAmmunition(type, ammoItem);
         if (result.fail) {
             if (result.message === "NO ROOM IN QUEUE") {
                 new Dialog({
-                    title: "Weapon is Full",
-                    content: `There is no additional space in the ${this.item.name} for ${ammoItem.name}.`,
+                    title: game.i18n.localize("SWSE.UI.DialogWeaponFullTitle"),
+                    content: game.i18n.format("SWSE.UI.DialogWeaponFullContent", {item: this.item.name, ammo: ammoItem.name}),
                     buttons: {
                         ok: {
-                            label: "Ok", callback: () => {
+                            label: game.i18n.localize("SWSE.UI.BtnOk"), callback: () => {
                                 return false;
                             }
                         }
@@ -253,16 +253,16 @@ export class ItemAmmunitionDelegate {
                 console.error("INSUFFICIENT AMMO")
 
                 new Dialog({
-                    title: "Insufficient Ammunition",
-                    content: `You does not have any ${type} ammunition in your.  Clicking "Ignore" will reload your weapon, but weapons with special ammunition might not work as expected.`,
+                    title: game.i18n.localize("SWSE.UI.DialogInsufficientAmmoTitle"),
+                    content: game.i18n.format("SWSE.UI.DialogInsufficientAmmoContent", {type: type}),
                     buttons: {
                         ok: {
-                            label: "Ok", callback: () => {
+                            label: game.i18n.localize("SWSE.UI.BtnOk"), callback: () => {
                                 return false;
                             }
                         },
                         ignore: {
-                            label: "Ignore", callback: async () => {
+                            label: game.i18n.localize("SWSE.UI.BtnIgnore"), callback: async () => {
 
                                 await this.setAmmunition(type, {value: this.getCapacity(type)});
                                 return true;

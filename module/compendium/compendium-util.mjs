@@ -144,7 +144,7 @@ export async function resolveEntity(item) {
             // instead of telling anyone what failed.
             entity = await SWSEItem.create(item, {render: false});
             if (!entity) {
-                ui.notifications.error(`SWSE could not create the item "${item.name ?? "(unnamed)"}" of type "${item.type ?? "(no type)"}". Its data was rejected as invalid; see the console for the validation error.`);
+                ui.notifications.error(game.i18n.format("SWSE.UI.ErrorCreateItemFailed", {name: item.name ?? "(unnamed)", type: item.type ?? "(no type)"}));
                 return {payload: undefined, itemName: item.name, entity: null, createdItem: false};
             }
             itemName = entity.name;
@@ -157,7 +157,7 @@ export async function resolveEntity(item) {
         // disabled module compendium).
         entity = await Item.implementation.fromDropData(item);
         if (!entity) {
-            ui.notifications.error(`SWSE could not resolve the item at "${item.uuid}". It may have been deleted or live in a compendium that is not available.`);
+            ui.notifications.error(game.i18n.format("SWSE.UI.ErrorResolveItemFailed", {uuid: item.uuid}));
             return {payload: undefined, itemName: item.name, entity: null, createdItem: false};
         }
         itemName = entity.name;
@@ -188,7 +188,7 @@ export async function resolveEntity(item) {
             let entities = await SWSEItem.create([item]) ?? [];
             entity = entities[0];
             if (!entity) {
-                ui.notifications.error(`SWSE could not create the language "${item.name ?? "(unnamed)"}". Its data was rejected as invalid; see the console for the validation error.`);
+                ui.notifications.error(game.i18n.format("SWSE.UI.ErrorCreateLanguageFailed", {name: item.name ?? "(unnamed)"}));
                 return {payload, itemName: itemName || item.name, entity: null, createdItem: false};
             }
             createdItem = true;

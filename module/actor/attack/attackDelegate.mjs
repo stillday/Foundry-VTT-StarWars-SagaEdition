@@ -191,7 +191,7 @@ export class AttackDelegate {
                 content: await this.getAttackDialogueContent(attackCount, doubleAttack, tripleAttack),
                 buttons: {
                     attack: {
-                        label: "Attack",
+                        label: game.i18n.localize("SWSE.UI.BtnAttack"),
                         callback: async (html) => {
 
                             let selects = html.find("select.attack-id");
@@ -205,7 +205,7 @@ export class AttackDelegate {
                         }
                     },
                     saveMacro: {
-                        label: "Save Macro",
+                        label: game.i18n.localize("SWSE.UI.BtnSaveMacro"),
                         callback: async (html) => {
                             let selects = html.find("select.attack-id");
 

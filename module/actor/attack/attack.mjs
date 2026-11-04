@@ -99,7 +99,7 @@ export function selectActorsByTemplates(templates = []) {
         const actors = tokenActors.filter(actor => !!actor);
         if(tokenActors.length !== actors.length) {
             console.warn("user targeted a token with no actor")
-            ui.notifications.warn("A Targeted Token has no Actor")
+            ui.notifications.warn(game.i18n.localize("SWSE.UI.WarnNoActorOnToken"))
         }
         actorsByLocation.push({location: {x, y}, actors: actors});
     }

@@ -30,41 +30,41 @@ export function warningsFromActor(actor) {
         })
         let beastClassLevels = actor.classLevels?.Beast || 0;
         if (beastClassLevels > 0 && naturalArmorBonus > beastClassLevels) {
-            warnings.push(`Natural Armor Bonus (${naturalArmorBonus}) should not exceed Beast Level (${beastClassLevels}).`)
+            warnings.push(game.i18n.format("SWSE.Warn.NaturalArmorExceedsBeastLevel", {bonus: naturalArmorBonus, level: beastClassLevels}))
         }
 
         if (!actor.system.attributeGenerationType && !actor.system.finalAttributeGenerationType) {
-            warnings.push(`<span class="attributeGenerationType">Please Select an attribute generation type</span>`)
+            warnings.push(`<span class="attributeGenerationType">${game.i18n.localize("SWSE.Warn.SelectAttributeGenerationType")}</span>`)
         }
 
         if (!actor.species && !actor.classes.find(c => c.name === 'Beast')) {
-            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:species" title="Open Species Compendium">Please Select a Species</span>`)
+            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:species" title="${game.i18n.localize("SWSE.Warn.TitleOpenSpeciesCompendium")}">${game.i18n.localize("SWSE.Warn.SelectSpecies")}</span>`)
         }
 
 
         if (!actor.classes || actor.classes.length === 0) {
-            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:class" title="Open Class Compendium">Please Select a Class</span>`)
+            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:class" title="${game.i18n.localize("SWSE.Warn.TitleOpenClassCompendium")}">${game.i18n.localize("SWSE.Warn.SelectClass")}</span>`)
         } else if(actor.characterLevel < 20 && XP_REQUIREMENT[actor.characterLevel + 1] <= actor.system.experience){
-            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:class" title="Open Class Compendium">You have enough XP for a new level!</span>`)
+            warnings.push(`<span data-action="compendium" data-type="Item" data-filter="-type:class" title="${game.i18n.localize("SWSE.Warn.TitleOpenClassCompendium")}">${game.i18n.localize("SWSE.Warn.EnoughXPForNewLevel")}</span>`)
         }
         let {availableTrainedSkillCount, availableTrainedKnowledgeSkillCount} = getAvailableTrainedSkills(actor);
 
         if (availableTrainedKnowledgeSkillCount > 0) {
-            warnings.push(`<span>Remaining Trained Knowledge Skills: ${availableTrainedKnowledgeSkillCount}</span>`)
+            warnings.push(`<span>${game.i18n.format("SWSE.Warn.RemainingTrainedKnowledgeSkills", {count: availableTrainedKnowledgeSkillCount})}</span>`)
         }
         if (availableTrainedSkillCount > 0) {
-            warnings.push(`<span>Remaining Trained Skills: ${availableTrainedSkillCount}</span>`)
+            warnings.push(`<span>${game.i18n.format("SWSE.Warn.RemainingTrainedSkills", {count: availableTrainedSkillCount})}</span>`)
         }
         if (availableTrainedSkillCount < 0) {
-            warnings.push(`<span>Too Many Skills Selected: ${Math.abs(availableTrainedSkillCount)}</span>`)
+            warnings.push(`<span>${game.i18n.format("SWSE.Warn.TooManySkillsSelected", {count: Math.abs(availableTrainedSkillCount)})}</span>`)
         }
         for (let item of Object.entries(actor.availableItems || {})) {
             if (item[1] !== 0) {
-                warnings.push(`<span data-action="compendium-web" data-type="feat, talent" data-provider-source="${item[0]}">Items from ${item[0]} remaining: ${item[1]}</span>`)
+                warnings.push(`<span data-action="compendium-web" data-type="feat, talent" data-provider-source="${item[0]}">${game.i18n.format("SWSE.Warn.ItemsFromSourceRemaining", {source: item[0], count: item[1]})}</span>`)
             }
         }
         for (let feat of actor.system.inactiveProvidedFeats || []) {
-            warnings.push(`<span>The ${feat.finalName} feat is provided but cannot be added because of missing prerequisites: ${feat.system.prerequisite?.text}</span>`)
+            warnings.push(`<span>${game.i18n.format("SWSE.Warn.FeatProvidedMissingPrereqs", {name: feat.finalName, prereqs: feat.system.prerequisite?.text})}</span>`)
         }
 
         // for (let feat of actor.system.inactiveProvidedFeats || []) {
@@ -76,22 +76,22 @@ export function warningsFromActor(actor) {
 
         for (let skill of Object.values(actor.system.skills)) {
             if (skill.blockedSkill) {
-                warnings.push(`<span>The ${skill.label} skill is provided but is not a Class Skill</span>`)
+                warnings.push(`<span>${game.i18n.format("SWSE.Warn.SkillNotClassSkill", {skill: skill.label})}</span>`)
             }
         }
 
 
         if (game.settings.get("swse", "enableEncumbranceByWeight")) {
             if (actor.weight >= actor.heavyLoad) {
-                warnings.push(`<span title="When carrying a heavy load a character takes a -10 penalty on some checks and the character's speed is reduced to three-quarters normal. A character can move up to three times his or her speed when Running with a Heavy Load.">You're carrying a <b>Heavy Load</b></span>`)
+                warnings.push(`<span title="${game.i18n.localize("SWSE.Warn.TitleHeavyLoad")}">${game.i18n.localize("SWSE.Warn.HeavyLoad")}</span>`)
             }
 
             if (actor.weight >= actor.strainCapacity) {
-                warnings.push(`<span title="Loses Dexterity Bonus to Reflex Defense and can only move one square">You're carrying more than your <b>Carry Capacity</b></span>`)
+                warnings.push(`<span title="${game.i18n.localize("SWSE.Warn.TitleCarryCapacity")}">${game.i18n.localize("SWSE.Warn.CarryCapacity")}</span>`)
             }
 
             if (actor.weight >= actor.maximumCapacity) {
-                warnings.push(`<span>You're carrying more than your <b>Maximum Capacity</b></span>`)
+                warnings.push(`<span>${game.i18n.localize("SWSE.Warn.MaximumCapacity")}</span>`)
             }
         }
     }
@@ -105,17 +105,17 @@ export function errorsFromActor(actor) {
 
     const levelEffects = actor.effects.filter(effect => effect.flags?.swse?.isLevel);
     if(levelEffects.length > 0){
-        errors.push(`<span data-action="remove-leaked-level-effects">CLICK ME!!! You have level Effects on your actor sheet.  You may notice strange behavior if you do not remove them from your "Modes" tab</span>`)
+        errors.push(`<span data-action="remove-leaked-level-effects">${game.i18n.localize("SWSE.Error.RemoveLevelEffects")}</span>`)
     }
 
     const weaponFireEffects = actor.effects.filter(effect => effect.flags?.swse?.group === "Fire Mode");
     if(weaponFireEffects.length > 0){
-        errors.push(`<span data-action="remove-fire-mode-effects">CLICK ME!!!  You have Fire Mode Effects on your actor sheet (Single-Shot, Autofire, etc...).  You may notice strange behavior if you do not remove them from your "Modes" tab</span>`)
+        errors.push(`<span data-action="remove-fire-mode-effects">${game.i18n.localize("SWSE.Error.RemoveFireModeEffects")}</span>`)
     }
 
     const itemTypes = actor.itemTypes
     if(itemTypes["vehicleBaseType"].length > 0){
-        errors.push(`<span data-action="remove-vehicleBaseType">CLICK ME!!!  You have a vehicleBaseType item on your sheet.  You may notice strange behavior if you do not remove it.  Click here to update your sheet.</span>`)
+        errors.push(`<span data-action="remove-vehicleBaseType">${game.i18n.localize("SWSE.Error.RemoveVehicleBaseType")}</span>`)
     }
 
     for (const item of actor.items) {
