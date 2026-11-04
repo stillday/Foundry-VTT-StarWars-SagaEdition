@@ -9,10 +9,37 @@ export const naturalSort = function (arr, propertyKey = "") {
     });
 };
 
+const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
 
-export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
-    constructor(...args) {
-        super(...args);
+export class SWSECompendiumBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
+
+    static DEFAULT_OPTIONS = {
+        classes: ["swse", "app"],
+        position: {
+            width: 720,
+            top: 30,
+            left: 40,
+        },
+        window: {
+            title: "Compendium Browser",
+            resizable: true,
+        },
+    };
+
+    static PARTS = {
+        body: {
+            template: "systems/swse/templates/compendium/compendium-browser.hbs",
+        }
+    };
+
+    constructor(options = {}) {
+        if (!options.position) options.position = {};
+        if (options.position.height == null && typeof window !== "undefined") {
+            options.position.height = window.innerHeight - 60;
+        }
+        const entityType = (options.type || "Item").toLowerCase();
+        options.id = `swse-compendium-browser-${entityType}`;
+        super(options);
 
         this.items = [];
 
@@ -72,8 +99,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
          * @property
          */
         this.filterQuery = /.*/;
-        this.defaultString = SWSECompendiumBrowser.buildFilterString(args[0]);
-        this.selectedEntityType = args[0].type || "Item"
+        this.defaultString = SWSECompendiumBrowser.buildFilterString(options);
+        this.selectedEntityType = options.type || "Item";
 
         this.do_filter(this.defaultString);
 
@@ -112,7 +139,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
      * "open the picker, start typing".
      */
     _primeSearchBox() {
-        const input = this.element?.find?.('input[name="search"]')?.[0];
+        const input = this.element?.querySelector('input[name="search"]');
         if (!input) return;
         input.value = this.defaultString;
         try {
@@ -139,20 +166,21 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         }
         this._primeSearchBox();
         this.do_filter(this.defaultString);
-        // An instance that is still inside `getData()` has no element yet, and `bringToTop()` reads
-        // `this.element[0]` unguarded.  Only raise a window that is actually on screen.
-        if (this.element?.[0]) this.bringToTop?.();
+        // An instance that is still inside `_prepareContext()` has no element yet, and
+        // `bringToTop()` may read the element unguarded.  Only raise a window that is on screen.
+        if (this.element) this.bringToTop?.();
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            template: "systems/swse/templates/compendium/compendium-browser.hbs",
-            classes: ["swse", "app"],
-            width: 720,
-            height: window.innerHeight - 60,
-            top: 30,
-            left: 40,
-        });
+    get type() {
+        return this.options.type;
+    }
+
+    get title() {
+        return [this.type, "Browser"].join(" ");
+    }
+
+    get entityType() {
+        return this.selectedEntityType;
     }
 
     shouldForceRefresh() {
@@ -194,7 +222,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         for (let a = 0; items.length < this.lazyLoadTreshold && a < this.items.length; a++) {
             const item = this.items[a];
             if (this._passesFilters(item.item)) {
-                item.item.compendiumModifier = this.options.actionModifier
+                item.item.compendiumModifier = this.options.actionModifier;
                 items.push(item);
             }
             this.lazyIndex = a + 1;
@@ -207,15 +235,16 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
 
     async _addEntryElement(item) {
         const elem = $(await foundry.applications.handlebars.renderTemplate("systems/swse/templates/compendium/compendium-browser_entry.hbs", item));
-        const rootElem = this.element.find(".directory-list");
-        rootElem.append(elem);
+        const rootElem = this.element.querySelector(".directory-list");
+        rootElem.append(elem[0]);
         this.activateEntryListeners(elem);
 
         return elem;
     }
 
     _clearEntryElements() {
-        this.element.find(".directory-list").empty();
+        const list = this.element?.querySelector(".directory-list");
+        if (list) list.innerHTML = "";
     }
 
     activateEntryListeners(elem) {
@@ -232,7 +261,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
 
     async _initLazyLoad() {
         await this._createInitialElements();
-        const rootElem = this.element.find(".directory-list");
+        const rootElem = this.element?.querySelector(".directory-list");
+        if (!rootElem) return;
 
         // Create function for lazy loading
         const lazyLoad = async () => {
@@ -249,9 +279,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         };
 
         // Create callback for lazy loading
-        $(rootElem).on("scroll", () => {
-            const top = rootElem.scrollTop() + rootElem.height();
-            const bottom = rootElem[0].scrollHeight - this.lazyLoadTreshold;
+        rootElem.addEventListener("scroll", () => {
+            const top = rootElem.scrollTop + rootElem.clientHeight;
+            const bottom = rootElem.scrollHeight - this.lazyLoadTreshold;
             if (top >= bottom) {
                 lazyLoad();
             }
@@ -273,7 +303,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         const cls = collection.documentClass;
         const document = await cls.fromDropData(data);
         let importDocument = collection.importDocument(document);
-        this.refresh()
+        this.refresh();
         return importDocument;
     }
 
@@ -305,7 +335,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                 icon: '<i class="fas fa-download"></i>',
                 visible: () => {
                     let collection = this.getCollection();
-                    return false && !!collection && collection.documentClass.canUserCreate(game.user)
+                    return false && !!collection && collection.documentClass.canUserCreate(game.user);
                 },
                 onClick: (event, target) => {
                     let collection = this.getCollection();
@@ -324,8 +354,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                         title: `${game.i18n.localize("COMPENDIUM.DeleteEntry")} ${document.name}`,
                         content: `<h4>${game.i18n.localize("AreYouSure")}</h4><p>${game.i18n.localize("COMPENDIUM.DeleteEntryWarning")}</p>`,
                         yes: () => {
-                            document.delete()
-                            this.refresh()
+                            document.delete();
+                            this.refresh();
                         }
                     });
                 }
@@ -373,18 +403,6 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                 itemCount: this.items.length///game.i18n.localize("PF1.TotalItems").format(this.items.length),
             },
         };
-    }
-
-    get type() {
-        return this.options.type;
-    }
-
-    get title() {
-        return [this.type, "Browser"].join(" ");
-    }
-
-    get entityType() {
-        return this.selectedEntityType
     }
 
     getBasicFilters() {
@@ -441,9 +459,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     }
 
     /** @inheritDoc */
-    async close(...args) {
+    async close(options = {}) {
         this.#finishProgress();
-        return super.close(...args);
+        return super.close(options);
     }
 
     /**
@@ -534,7 +552,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         // Deliberately not awaited: _gatherData/getData must resolve so the window appears while the
         // packs are still loading, otherwise the user stares at nothing for the whole load.
         Promise.all(promises).then(async response => {
-            response.forEach(items => this.items.push(...items))
+            response.forEach(items => this.items.push(...items));
             // Sort items
             this.items = naturalSort(this.items, "item.name");
 
@@ -548,7 +566,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
             // does, so at render time both were still 0.  Fill them in once the items are actually
             // there instead of leaving the window claiming "0 of 0".
             this._updateItemCounts();
-        })
+        });
     }
 
     /* ------------------------------------- */
@@ -601,7 +619,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         return result;
     }
 
-    async getData() {
+    async _prepareContext() {
         this.updateForceRefreshData();
         if (this.shouldForceRefresh() || !this._data.loaded) await this.loadData();
         await this.updateForceRefreshData({save: true, refresh: false});
@@ -614,37 +632,40 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
 
     async refresh() {
         await this.loadData();
-        this.render(false);
+        return this.render({ force: true });
     }
 
     _fetchGeneralFilters() {
         this.filters = [];
     }
 
-    async _render(force, ...args) {
-        await super._render(force, ...args);
+    async _onRender(context, options) {
+        await super._onRender(context, options);
 
-        this._determineFilteredItemCount();
-    }
+        const el = this.element;
 
-    activateListeners(html) {
-        super.activateListeners(html);
-
-        let search = html.find('input[name="search"]');
-        search.keyup(this._onFilterResults.bind(this));
+        const search = el.querySelector('input[name="search"]');
+        if (search) {
+            search.addEventListener("keyup", this._onFilterResults.bind(this));
+        }
         this._primeSearchBox();
 
-        html.each((i, li) => {
-            li.addEventListener("drop", (ev) => this._onDrop(ev));
+        el.addEventListener("dragover", (ev) => ev.preventDefault());
+        el.addEventListener("drop", (ev) => this._onDrop(ev));
+
+        el.querySelectorAll('.filter input[type="checkbox"]').forEach(input => {
+            input.addEventListener("change", this._onActivateBooleanFilter.bind(this));
         });
 
-        html.find('.filter input[type="checkbox"]').change(this._onActivateBooleanFilter.bind(this));
+        el.querySelectorAll(".filter h3").forEach(h3 => {
+            h3.addEventListener("click", this._toggleFilterVisibility.bind(this));
+        });
 
-        html.find(".filter h3").click(this._toggleFilterVisibility.bind(this));
+        const refreshBtn = el.querySelector("button.refresh");
+        if (refreshBtn) refreshBtn.addEventListener("click", this.refresh.bind(this));
 
-        html.find("button.refresh").click(this.refresh.bind(this));
-
-        this._contextMenu(html)
+        this._contextMenu(el);
+        this._determineFilteredItemCount();
     }
 
     /**
@@ -738,9 +759,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                         attributeKey: "isHomebrew",
                         reduce:"OR"
                     });
-                    return inheritableAttribute
+                    return inheritableAttribute;
                 }
-            })
+            });
         }
 
         let groomedString = searchTerms.join(" ").trim();
@@ -755,52 +776,52 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
 
 
     generateFilters(filterStrings) {
-        return filterStrings.map(filterString => this.generateFilter(filterString))
+        return filterStrings.map(filterString => this.generateFilter(filterString));
     }
 
     generateFilter(filterString) {
         if (filterString.startsWith("-type")) {
-            let s = filterString.split(":")[1]
+            let s = filterString.split(":")[1];
 
             if (s) {
                 return {
                     type: 'type',
                     test: (item) => {
-                        return new RegExp(RegExp.escape(s), "i").test(item.type)
+                        return new RegExp(RegExp.escape(s), "i").test(item.type);
                     }
-                }
+                };
             }
         } else if (filterString.startsWith("-subtype")) {
-            let s = filterString.split(":")[1]
+            let s = filterString.split(":")[1];
 
             if (s) {
                 return {
                     type: 'subtype',
                     test: (item) => {
-                        return new RegExp(RegExp.escape(s), "i").test(item.subType)
+                        return new RegExp(RegExp.escape(s), "i").test(item.subType);
                     }
-                }
+                };
             }
         } else if (filterString.startsWith("-pack")) {
-            let s = filterString.split(":")[1]
+            let s = filterString.split(":")[1];
 
             if (s) {
-                s = s.replace(/_/g, " ")
+                s = s.replace(/_/g, " ");
                 return {
                     type: 'pack',
                     test: (item) => {
                         let regExp = new RegExp(RegExp.escape(s), "i");
-                        return regExp.test(item.pack)
+                        return regExp.test(item.pack);
                     }
-                }
+                };
             }
         } else if (filterString.startsWith("-exotic")) {
             return {
                 type: 'exotic',
                 test: (item) => {
-                    return !!item.isExotic
+                    return !!item.isExotic;
                 }
-            }
+            };
         }
     }
 
@@ -846,7 +867,7 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         this._clearEntryElements();
 
         // Scroll up
-        const rootElem = this.element.find(".directory-list")[0];
+        const rootElem = this.element?.querySelector(".directory-list");
         if (rootElem) {
             rootElem.scrollTop = 0;
         }
@@ -865,9 +886,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
                 itemCount++;
             }
         }
-        this.element
-            .find('span[data-type="filterItemCount"]')
-            .text(itemCount)//game.i18n.localize("PF1.FilteredItems").format(itemCount));
+        this.element?.querySelectorAll('[data-type="filterItemCount"]').forEach(el => {
+            el.textContent = itemCount;
+        });
     }
 
     /**
@@ -877,9 +898,9 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
      */
     _updateItemCounts() {
         this._determineFilteredItemCount();
-        this.element
-            .find('span[data-type="itemCount"]')
-            .text(this.items.length);
+        this.element?.querySelectorAll('[data-type="itemCount"]').forEach(el => {
+            el.textContent = this.items.length;
+        });
     }
 
     _passesFilters(item) {
@@ -899,8 +920,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
         let groupedFilters = {};
         this.postFilters.forEach(f => {
             if (!f) return;
-            groupedFilters[f.type] = groupedFilters[f.type] || []
-            groupedFilters[f.type].push(f)
+            groupedFilters[f.type] = groupedFilters[f.type] || [];
+            groupedFilters[f.type].push(f);
         });
 
         for (let key of Object.keys(groupedFilters)) {
@@ -960,7 +981,8 @@ export class SWSECompendiumBrowser extends foundry.appv1.api.Application {
     }
 
     getCollection() {
-        let search = this.element.find(`input[name="search"]`)[0];
+        const search = this.element?.querySelector('input[name="search"]');
+        if (!search) return null;
         let values = search.value.split(" ");
 
         let compendium;

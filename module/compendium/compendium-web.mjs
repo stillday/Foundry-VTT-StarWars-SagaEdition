@@ -2,51 +2,37 @@ import {getIndexEntriesByTypes} from "./compendium-util.mjs";
 import {meetsPrerequisites} from "../prerequisite.mjs";
 import {SimpleCache} from "../common/simple-cache.mjs";
 
-export class CompendiumWeb extends foundry.appv1.api.Application {
+const { HandlebarsApplicationMixin, ApplicationV2 } = foundry.applications.api;
+
+export class CompendiumWeb extends HandlebarsApplicationMixin(ApplicationV2) {
 
     static _pattern = /\s\([\w#\s]*\)/
     static _payloadPattern = new RegExp(CompendiumWeb._pattern, "g");
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            template: "systems/swse/templates/compendium/compendium-web.hbs",
-            id: null,
-            popOut: true,
+    static DEFAULT_OPTIONS = {
+        classes: ["web", "swse"],
+        position: {
             width: 700,
             height: 1400,
-            classes: ["web", "swse"],
+        },
+        window: {
+            title: "Compendium Web",
             resizable: true,
-            baseApplication: "CompendiumWeb"
-        });
-    }
+        },
+    };
 
-    constructor(...args) {
-        super(...args);
+    static PARTS = {
+        body: {
+            template: "systems/swse/templates/compendium/compendium-web.hbs",
+        }
+    };
 
-        this.cache = new SimpleCache()
-        Hooks.on("renderApplication", async (event, target) => {
-            if (event.appId !== this.appId) { //is this really the best way to do this?  weird that applications aren't more contained
-                return;
-            }
+    constructor(options = {}) {
+        const types = options.types ?? ['feat', 'talent'];
+        options.id = `compendium-web-${types.join('-')}`;
+        super(options);
 
-            this.options = args[0];
-            this.options.homebrewEnabled = game.settings.get("swse", "enableHomebrewContent");
-            this.target = target;
-
-            this.types = ['feat', 'talent']
-
-            if (this.options?.types) {
-                this.types = this.options.types;
-            }
-
-            await this.addFilters(target, this.types)
-            await this.populateFiltersFromArguments(target, this.options);
-            await this.renderWeb(event, target, this.types);
-
-            //currently disabled.  will allow arrows to be drawn in the future
-            // const start = Date.now()
-            // this.drawArrows(target).then(() => console.log( Date.now() - start))
-        })
+        this.cache = new SimpleCache();
     }
 
     /**
@@ -99,7 +85,6 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
                     return {display: s, value: s}
                 })
 
-                //return SPECIES;
             },
             allowExclude: true
         },
@@ -210,7 +195,6 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
             const prerequisites = CompendiumWeb.getPrerequisitesByType(item.system.prerequisite, types)
 
             if (prerequisites && prerequisites.length > 0) {
-                //dependencyMap[item.name] = prerequisites;
                 for (const prerequisite of prerequisites) {
                     const requiredItem = this.getItemByPrerequisite(prerequisite, items);
                     if (requiredItem && item) {
@@ -433,7 +417,6 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
 
     getItemBlock(item, groupNumber, invertedDependencies = [], metaData) {
         const img = $(`<img src="${item.img}" alt="${item.name}">`);
-        // const itemBlock = $(`<div class="icon"></div>`);
 
         img.attr("title", item.system.prerequisite?.text)
         img.attr("draggable", "true")
@@ -488,17 +471,31 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
         return prerequisites;
     }
 
-    get id() {
-        return `${this.options.id}${this._original ? "-popout" : ""}`;
-    }
-
-    async getData(options = {}) {
+    async _prepareContext() {
         return {
             cssId: this.id,
             cssClass: this.options.classes.join(" "),
             user: game.user
         };
     }
+
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+
+        const target = $(this.element);
+
+        this.options.homebrewEnabled = game.settings.get("swse", "enableHomebrewContent");
+
+        this.types = ['feat', 'talent'];
+        if (this.options?.types) {
+            this.types = this.options.types;
+        }
+
+        await this.addFilters(target, this.types);
+        await this.populateFiltersFromArguments(target, this.options);
+        await this.renderWeb(null, target, this.types);
+    }
+
     async populateFiltersFromArguments(target, options) {
 
         if (options.webFilters) {
@@ -611,22 +608,15 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
             const ctx = webCanvas[0].getContext("2d");
 
 
-            //const arrows = $(`<div class="arrows"></div>`)
             for (const from of found) {
                 let drawto = from.dataset.drawTo?.split(",")
                 for (const drawtoElement of drawto) {
                     const to = $(target.find(`#${drawtoElement}`))[0]
                     if (to) {
                         this.drawLine(webCanvas[0], ctx, from, to)
-
-                        //this.connect(from, to, "black", 2)
-                        //console.log(`<svg width="500" height="500"><line x1="${from.offsetLeft}" y1="${from.offsetTop }" x2="${to.offsetLeft }" y2="${to.offsetTop}" stroke="black"/></svg>`)
-                        //arrows.append($(`<svg><line x1="${from.offsetLeft}" y1="${from.offsetTop }" x2="${to.offsetLeft }" y2="${to.offsetTop}" stroke="black"/></svg>`))
-                        //new LeaderLine(from, to)
                     }
                 }
             }
-            //webviewer.append(arrows)
 
         })
 
@@ -657,7 +647,6 @@ export class CompendiumWeb extends foundry.appv1.api.Application {
             if(bisected.length > 0){
                 const existing = invertedDependencyMap.get(key);
                 invertedDependencyMap.set(key, existing.filter(dep => !bisected.includes(dep)))
-                //console.log(invertedDependencyMap.get(key), bisected, existing)
             }
         }
     }

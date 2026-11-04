@@ -58,6 +58,14 @@ global.foundry = {
   },
   applications: {
     api: {
+        ApplicationV2: class {
+            constructor(options = {}) { this.options = options; }
+            async render(_options) { return this; }
+            async close(_options) {}
+            get element() { return null; }
+            get rendered() { return false; }
+            bringToTop() {}
+        },
         HandlebarsApplicationMixin: (Base) => {
             class Mixed extends Base {
                 async _prepareContext(_options) { return {}; }

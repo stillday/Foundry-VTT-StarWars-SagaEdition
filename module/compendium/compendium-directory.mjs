@@ -31,25 +31,24 @@ export class SWSECompendiumDirectory extends foundry.applications.sidebar.tabs.C
             // filters are applied client side, so hand the new filter to it instead of building a
             // second one.
             //
-            // `app.rendered` is deliberately NOT part of the test.  `Application#_render` registers
-            // the instance in `ui.windows` before it awaits `getData()` but only sets
-            // `_state = RENDERED` after that await returns (client/appv1/api/application-v1.mjs), and
-            // `getData()` is where the compendium load happens.  Matching on `rendered` therefore
-            // missed exactly the instance that is still loading, so every further click during the
-            // load - the whole window in which a user actually clicks again because nothing appeared
-            // yet - spawned another browser and another full load.  Anything still present in
-            // `ui.windows` is alive: `close()` deletes its entry.
-            const existing = Object.values(ui.windows).find(app => app instanceof SWSECompendiumBrowser
-                && app.entityType === (type || "Item"));
-            if (existing) {
+            // `app.rendered` is deliberately NOT part of the test.  `ApplicationV2` registers the
+            // instance in `foundry.applications.instances` (a Map keyed by app id) as soon as it is
+            // constructed, before `_prepareContext()` is called, and removes it in `close()`.
+            // Matching on `rendered` would miss the instance that is still loading - exactly the
+            // window where a user clicks again because nothing appeared yet - and would spawn another
+            // browser with another full load.  Anything in `instances` is alive.
+            //
+            // The browser's id is `swse-compendium-browser-${entityType.toLowerCase()}` (set in its
+            // constructor), so one lookup replaces the linear scan over all open windows.
+            const entityType = (type || "Item").toLowerCase();
+            const stableId = `swse-compendium-browser-${entityType}`;
+            const existing = foundry.applications.instances.get(stableId);
+            if (existing instanceof SWSECompendiumBrowser) {
                 existing.applyFilterRequest(request);
                 return;
             }
 
-            // `render` rather than `_render`: only the public entry point sets the render state up
-            // and reports failures, and appv1's `_render` swallows nothing (an exception there
-            // leaves the application half-rendered with an empty element).
-            new SWSECompendiumBrowser(request).render(true);
+            new SWSECompendiumBrowser(request).render({ force: true });
         } else {
             let found = game.packs.get(pack);
 
