@@ -33,8 +33,9 @@ function addWikiLink(app, html) {
     const item = app?.item ?? app?.document;
     const url = wikiUrl(item?.name);
     if (!url) return;
-    const root = html?.[0] ?? html;
-    const header = root?.querySelector?.(".window-header") ?? root?.closest?.(".window-app")?.querySelector(".window-header");
+    const root = html instanceof Element ? html : html?.[0];
+    const header = root?.querySelector?.(".window-header")
+        ?? root?.closest?.(".window-app, .application")?.querySelector(".window-header");
     if (!header || header.querySelector(".swse-wiki-link")) return;
     const close = header.querySelector(".close");
     for (const wiki of WIKIS) {

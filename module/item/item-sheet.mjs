@@ -48,9 +48,14 @@ export class SWSEItemSheet extends HandlebarsApplicationMixin(foundry.applicatio
     async _onRender(context, options) {
         await super._onRender(context, options);
 
-        if (options.isFirstRender) {
-            this.changeTab("summary", "primary");
-        }
+        const activeTab = (this.tabGroups["primary"] ||= "summary");
+        const el = this.element;
+        el.querySelectorAll(".sheet-tabs .item[data-tab]").forEach(a => {
+            a.classList.toggle("active", a.dataset.tab === activeTab);
+        });
+        el.querySelectorAll(".tab[data-group='primary']").forEach(panel => {
+            panel.classList.toggle("active", panel.dataset.tab === activeTab);
+        });
 
         this._bindEventListeners();
     }
