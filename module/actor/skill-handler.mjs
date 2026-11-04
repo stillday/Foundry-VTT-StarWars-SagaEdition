@@ -219,13 +219,10 @@ export function generateSkills(actor, options = {}) {
                 }
             }
 
-            // #568: homebrew classes (e.g. DarthAuthor's) may not define `classSkill` changes,
-            // leaving classSkills empty even though the actor has class levels.
-            // In that case treat all skills as class skills rather than blocking training.
-            const noClassSkillsFromData = classSkills.size === 0 && actor.itemTypes.class.length > 0;
-            skill.isClass = resSkill === 'Use the Force' ? actor.isForceSensitive
-                : noClassSkillsFromData ? true
-                : classSkills.has(key)
+            // Rules (CRB / SWSE wiki "Using Skills"): trained skills come from the class skill list;
+            // a class without class-skill data does NOT make every skill a class skill (#568).
+            // Such homebrew classes only keep existing training instead (see reset guard below).
+            skill.isClass = resSkill === 'Use the Force' ? actor.isForceSensitive : classSkills.has(key)
 
             let applicableRerolls = reRollSkills.filter(reroll => isRerollApplicable(toStringValue(reroll.value).split(":")[0], key, skill.attribute))
 
