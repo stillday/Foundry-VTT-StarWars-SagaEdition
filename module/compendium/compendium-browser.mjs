@@ -162,7 +162,7 @@ export class SWSECompendiumBrowser extends HandlebarsApplicationMixin(Applicatio
     applyFilterRequest(request = {}) {
         this.defaultString = SWSECompendiumBrowser.buildFilterString(request);
         if (request.actionModifier !== undefined) {
-            this.options.actionModifier = request.actionModifier;
+            this.actionModifier = request.actionModifier;
         }
         this._primeSearchBox();
         this.do_filter(this.defaultString);
@@ -222,7 +222,7 @@ export class SWSECompendiumBrowser extends HandlebarsApplicationMixin(Applicatio
         for (let a = 0; items.length < this.lazyLoadTreshold && a < this.items.length; a++) {
             const item = this.items[a];
             if (this._passesFilters(item.item)) {
-                item.item.compendiumModifier = this.options.actionModifier;
+                item.item.compendiumModifier = this.actionModifier ?? this.options.actionModifier;
                 items.push(item);
             }
             this.lazyIndex = a + 1;
@@ -314,7 +314,8 @@ export class SWSECompendiumBrowser extends HandlebarsApplicationMixin(Applicatio
         // warnings when omitted, so both have to be supplied.
         const container = html instanceof HTMLElement ? html : html?.[0];
         if (!container) return;
-        foundry.applications.ux.ContextMenu.implementation.create(this, container, ".directory-item",
+        // ApplicationV2: the static ContextMenu.create only supports V1 apps, so construct directly.
+        new foundry.applications.ux.ContextMenu.implementation(container, ".directory-item",
             this._getEntryContextOptions(), {jQuery: false});
     }
 

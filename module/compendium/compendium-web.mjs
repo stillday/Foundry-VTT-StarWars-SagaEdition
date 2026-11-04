@@ -484,7 +484,8 @@ export class CompendiumWeb extends HandlebarsApplicationMixin(ApplicationV2) {
 
         const target = $(this.element);
 
-        this.options.homebrewEnabled = game.settings.get("swse", "enableHomebrewContent");
+        // ApplicationV2 freezes `this.options`, so keep derived state on the instance.
+        this.homebrewEnabled = game.settings.get("swse", "enableHomebrewContent");
 
         this.types = ['feat', 'talent'];
         if (this.options?.types) {
@@ -492,7 +493,7 @@ export class CompendiumWeb extends HandlebarsApplicationMixin(ApplicationV2) {
         }
 
         await this.addFilters(target, this.types);
-        await this.populateFiltersFromArguments(target, this.options);
+        await this.populateFiltersFromArguments(target, {...this.options, homebrewEnabled: this.homebrewEnabled});
         await this.renderWeb(null, target, this.types);
     }
 
