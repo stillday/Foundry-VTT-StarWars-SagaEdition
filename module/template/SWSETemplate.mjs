@@ -91,7 +91,6 @@ export default class SWSETemplate extends foundry.canvas.placeables.MeasuredTemp
             //     templateData.width = target.width ?? canvas.dimensions.distance;
             //     break;
             case "circle":
-
             default:
                 break;
         }

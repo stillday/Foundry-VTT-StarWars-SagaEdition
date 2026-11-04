@@ -2435,7 +2435,7 @@ class SWSEActor extends Actor {
                     SWSEActor.updateOrAddChange(entity, "trainedSkills", "1");
                     SWSEActor.removeChange(entity, "automaticTrainedSkill");
                 }
-                if (entity.name === 'Bonus Feat' && !payload) {
+                if (entity.name === 'Bonus Feat' && !item?.payload) {
                     SWSEActor.updateOrAddChange(entity, "provides", "General Feats");
                 }
             }
@@ -2952,7 +2952,7 @@ class SWSEActor extends Actor {
                         override: {
                             icon: '<i class="fas fa-check"></i>',
                             label: 'Override',
-                            callback: () => this.resolveUpdate(itemId, equipType, slot, position)
+                            callback: () => this.resolveUpdate(item, equipType, slot, position)
                         }
                     }
                 }).render(true);

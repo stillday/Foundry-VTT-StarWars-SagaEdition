@@ -1,0 +1,9 @@
+{
+  "root": true,
+  "env": { "browser": true, "es2022": true, "node": true },
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
+  "extends": ["eslint:recommended"],
+  "globals": { "game": "readonly", "foundry": "readonly", "CONFIG": "readonly", "Hooks": "readonly", "ui": "readonly", "Roll": "readonly", "Actor": "readonly", "Item": "readonly", "ChatMessage": "readonly", "Handlebars": "readonly", "canvas": "readonly", "fromUuid": "readonly", "fromUuidSync": "readonly", "Dialog": "readonly", "TextEditor": "readonly", "ActiveEffect": "readonly", "Macro": "readonly", "$": "readonly", "jQuery": "readonly", "loadTemplates": "readonly", "renderTemplate": "readonly", "mergeObject": "readonly", "duplicate": "readonly", "getProperty": "readonly", "setProperty": "readonly", "Token": "readonly", "Combat": "readonly", "Actors": "readonly", "Items": "readonly", "ChatMessage": "readonly", "ChatLog": "readonly", "Compendium": "readonly", "FilePicker": "readonly", "TokenDocument": "readonly", "Application": "readonly", "FormApplication": "readonly", "DocumentSheet": "readonly", "ItemSheet": "readonly", "ActorSheet": "readonly", "Die": "readonly", "ChatBubbles": "readonly", "RollTerm": "readonly", "NumericTerm": "readonly", "OperatorTerm": "readonly", "PoolTerm": "readonly", "StringTerm": "readonly", "DiceTerm": "readonly", "ContextMenu": "readonly", "Folder": "readonly", "Scene": "readonly", "User": "readonly", "Setting": "readonly", "getDocumentClass": "readonly", "dragRuler": "readonly", "CONST": "readonly", "SortingHelpers": "readonly", "QuenchBatchContext": "readonly" },
+  "ignorePatterns": ["node_modules/", "css/", "packs/", "module_test/"],
+  "rules": { "no-unused-vars": "warn", "no-prototype-builtins": "off" }
+}

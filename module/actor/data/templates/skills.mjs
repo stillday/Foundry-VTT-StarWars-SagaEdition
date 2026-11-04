@@ -499,18 +499,6 @@ export class SkillFunctions {
     }
 
 
-     configureSkill(skill, nonZeroBonuses, actor, label, skillAttributeMod) {
-        skill.title = nonZeroBonuses.map(bonus => bonus.description).join(NEW_LINE);
-        skill.value = resolveValueArray(nonZeroBonuses.map(bonus => bonus.value), actor);
-        skill.variable = `@${actor.cleanSkillName(label)}`;
-        actor.resolvedVariables.set(skill.variable, "1d20 + " + skill.value);
-        skill.label = label.replace(/\(/g, "( ").titleCase().replace(/\( /g, "(")
-        skill.key = label.toLowerCase()
-        actor.resolvedLabels.set(skill.variable, skill.label);
-        skill.abilityBonus = skillAttributeMod;
-        skill.rowColor = label === "Initiative" || label === "Perception" ? "highlighted-skill" : "";
-        skill.situationalSkills = [];
-    }
 
      standardizedAttribute(rerollKey)
     {
