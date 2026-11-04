@@ -57,6 +57,19 @@ global.foundry = {
     }
   },
   applications: {
+    api: {
+        HandlebarsApplicationMixin: (Base) => {
+            class Mixed extends Base {
+                async _prepareContext(_options) { return {}; }
+                async _onRender(_context, _options) {}
+                changeTab(_tabId, _group) {}
+                submit() { return Promise.resolve(); }
+                get element() { return { querySelectorAll: () => [] }; }
+                get isEditable() { return true; }
+            }
+            return Mixed;
+        }
+    },
     sidebar: {
       tabs: {
         CompendiumDirectory: class {}
@@ -65,6 +78,18 @@ global.foundry = {
     sheets: {
         ActiveEffectConfig: class {},
         ItemSheet: class {},
+        ItemSheetV2: class {
+            get item() { return this.document ?? null; }
+            get actor() { return this.document?.actor ?? null; }
+            get document() { return null; }
+            get isEditable() { return true; }
+            async _prepareContext(_options) { return {}; }
+            async _onRender(_context, _options) {}
+            _canDragStart(_selector) { return true; }
+            _canDragDrop(_selector) { return true; }
+            _onDragStart(_event) {}
+            async _onDrop(_event) {}
+        },
         ActorSheet: class {}
     },
     hud: {

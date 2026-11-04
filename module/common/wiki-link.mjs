@@ -50,7 +50,10 @@ function addWikiLink(app, html) {
     }
 }
 
+export const WIKI_HOOKS = ["renderSWSEItemSheet", "renderItemSheetV2"];
+
 export function registerWikiLink() {
-    Hooks.on("renderItemSheet", addWikiLink);
-    Hooks.on("renderSWSEItemSheet", addWikiLink);
+    for (const hook of WIKI_HOOKS) {
+        Hooks.on(hook, addWikiLink);
+    }
 }

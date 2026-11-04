@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {wikiUrl, WIKI_BASE} from "../module/common/wiki-link.mjs";
+import {wikiUrl, WIKI_BASE, WIKI_HOOKS} from "../module/common/wiki-link.mjs";
 
 test("wikiUrl builds the page URL with underscores", () => {
     assert.equal(wikiUrl("Catch a Second Wind"), WIKI_BASE + "Catch_a_Second_Wind");
@@ -24,4 +24,9 @@ test("Jedipedia is offered for lore item types only", async () => {
     assert.ok(jedi.types.includes("species"));
     assert.ok(!LORE_TYPES.includes("feat"));
     assert.equal(wikiUrl("Zabrak", jedi.base), "https://jedipedia.fandom.com/wiki/Zabrak");
+});
+
+test("WIKI_HOOKS includes renderSWSEItemSheet and renderItemSheetV2", () => {
+    assert.ok(WIKI_HOOKS.includes("renderSWSEItemSheet"));
+    assert.ok(WIKI_HOOKS.includes("renderItemSheetV2"));
 });
